@@ -130,7 +130,7 @@ export function Nav({ active }) {
   const unread = useUnread();
   const items = [
     ['/', 'home', 'Akış'], ['/takvim', 'cal', 'Takvim'], ['/uretim', 'flow', 'Üretim'],
-    ['/firmalar', 'building', 'Firmalar'], ['/bildirimler', 'bell', 'Bildirimler']
+    ['/firmalar', 'building', 'Firmalar'], ['/asistan', 'sparkle', 'Asistan']
   ];
   return (
     <nav className="nav" aria-label="Ana menü">
@@ -138,7 +138,7 @@ export function Nav({ active }) {
         {items.map(([to, icon, label]) => (
           <a key={to} href={'#' + to} aria-current={active === to ? 'page' : undefined} style={{ position: 'relative' }}>
             <Icon name={icon} size={24} />{label}
-            {icon === 'bell' && unread > 0 && <span className="badge" style={{ top: 0, right: 'calc(50% - 22px)' }} aria-label={unread + ' okunmamış'}>{unread > 9 ? '9+' : unread}</span>}
+            {false && unread > 0 && <span className="badge" style={{ top: 0, right: 'calc(50% - 22px)' }} aria-label={unread + ' okunmamış'}>{unread > 9 ? '9+' : unread}</span>}
           </a>
         ))}
       </div>

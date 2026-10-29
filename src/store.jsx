@@ -6,6 +6,22 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from './firebase.js';
 import { SEED_FIRMS } from './data.js';
+import { sampleTasks } from './seed.js';
+import { runTransaction } from 'firebase/firestore';
+
+async function seedOnce(user) {
+  const flag = doc(db, 'meta', 'seed');
+  const go = await runTransaction(db, async (tx) => {
+    const s = await tx.get(flag);
+    if (s.exists()) return false;
+    tx.set(flag, { at: serverTimestamp(), by: user.uid });
+    return true;
+  });
+  if (!go) return;
+  const b = writeBatch(db);
+  sampleTasks().forEach((t) => b.set(doc(collection(db, 'tasks')), { ...t, sample: true, createdBy: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  await b.commit();
+}
 
 const Ctx = createContext(null);
 export const useStore = () => useContext(Ctx);
@@ -21,6 +37,7 @@ export function StoreProvider({ children }) {
   const [activity, setActivity] = useState([]);
   const [ready, setReady] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [gallery, setGallery] = useState([]);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u || null)), []);
 
@@ -54,6 +71,11 @@ export function StoreProvider({ children }) {
       setActivity(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })));
     }));
     unsubs.push(onSnapshot(doc(db, 'users', user.uid), (snap) => { setProfile(snap.exists() ? snap.data() : null); setProfileLoaded(true); }));
+    unsubs.push(onSnapshot(collection(db, 'gallery'), (snap) => {
+      setGallery(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
+    }));
+    // İlk kurulumda bir kez: örnek işler (galeri boş başlar; içerik istendiğinde üretilir)
+    seedOnce(user).catch(() => {});
     return () => unsubs.forEach((u) => u());
   }, [user]);
 
@@ -120,11 +142,24 @@ export function StoreProvider({ children }) {
         await addDoc(collection(db, 'firms', firmId, 'messages'), { text, by: user.uid, byName: me().name, at: serverTimestamp() });
         log('comment', me().name + ', ' + firmName(firmId) + ' sohbetine yazdı: “' + text.slice(0, 80) + '”', { firmId });
       },
+      addGallery: async (item) => {
+        const ref = await addDoc(collection(db, 'gallery'), { status: 'taslak', source: 'ekip', ...item, by: user.uid, byName: me().name, at: serverTimestamp() });
+        log('gallery', firmName(item.firmId) + ' galerisine yeni ' + (item.kind === 'video' ? 'video' : 'post') + ': ' + (item.title || ''), { firmId: item.firmId, galleryId: ref.id });
+        return ref.id;
+      },
+      updateGallery: (id, patch) => updateDoc(doc(db, 'gallery', id), patch),
+      deleteGallery: (id) => deleteDoc(doc(db, 'gallery', id)),
+      deleteSamples: async () => {
+        const snap = await getDocs(collection(db, 'tasks'));
+        const b = writeBatch(db);
+        snap.docs.filter((d) => d.data().sample).forEach((d) => b.delete(d.ref));
+        await b.commit();
+      },
       exists: async () => (await getDocs(collection(db, 'firms'))).size
     };
   }, [user, profile, firms]);
 
-  const value = { user, profile, profileLoaded, firms, tasks, users, activity, ready, ...api };
+  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, ready, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

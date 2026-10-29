@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store.jsx';
-import { Nav, Icon, Logo } from '../components/ui.jsx';
+import { Nav, Icon, Logo, back } from '../components/ui.jsx';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase.js';
 import { timeAgo } from '../data.js';
 
 const KIND = {
@@ -8,11 +10,13 @@ const KIND = {
   done: { label: 'Tamamlandı', icon: 'check', bg: '#E3EADB', fg: '#2F4A2C' },
   comment: { label: 'Yorum', icon: 'msg', bg: '#DCE7F3', fg: '#1F4770' },
   approval: { label: 'Müşteri onayı', icon: 'shield', bg: '#ECE2F2', fg: '#5A2F73' },
-  firm: { label: 'Firma', icon: 'building', bg: '#F6E3CF', fg: '#7A3E0C' }
+  firm: { label: 'Firma', icon: 'building', bg: '#F6E3CF', fg: '#7A3E0C' },
+  gallery: { label: 'Galeri', icon: 'star', bg: '#E3EADB', fg: '#2F4A2C' }
 };
 
 export default function Bildirimler() {
-  const { activity, user, firms } = useStore();
+  const { activity, user, firms, tasks, deleteSamples, profile } = useStore();
+  const samples = tasks.filter((t) => t.sample).length;
   const key = 'moss-seen-' + user.uid;
   const [seen] = useState(() => Number(localStorage.getItem(key) || 0));
   useEffect(() => {
@@ -22,14 +26,15 @@ export default function Bildirimler() {
 
   return (
     <div className="screen">
-      <h1 className="h1">Bildirimler</h1>
+      <button className="back" onClick={() => back('/')}><Icon name="left" size={20} />Geri</button>
+      <h1 className="h1" style={{ marginTop: 6 }}>Bildirimler</h1>
       <div className="stack">
         {activity.length === 0 && <div className="card empty">Henüz hareket yok. Ekipten biri iş eklediğinde, yorum yazdığında ya da bir işi bitirdiğinde burada görünecek.</div>}
         {activity.map((a) => {
           const k = KIND[a.kind] || KIND.task;
           const unread = a.atMs > seen && a.by !== user.uid;
           const firm = firms.find((f) => f.id === a.firmId);
-          const href = a.taskId ? '#/is/' + a.taskId : a.firmId ? '#/firma/' + a.firmId : '#/';
+          const href = a.taskId ? '#/is/' + a.taskId : a.galleryId ? '#/galeri/' + a.galleryId : a.firmId ? '#/firma/' + a.firmId : '#/';
           return (
             <a key={a.id} href={href} className="card" style={{ display: 'flex', gap: 12, padding: 14, background: unread ? 'var(--surface)' : 'var(--surface-2)' }}>
               {firm ? <Logo firm={firm} size={40} radius={12} />
@@ -48,6 +53,18 @@ export default function Bildirimler() {
       <div className="card pad small" style={{ lineHeight: '19px' }}>
         “Yaptın mı?”, çekim sabahı, içerik stoğu ve özel gün hatırlatmaları bir sonraki güncellemede telefonuna düşmeye başlayacak.
         Şimdilik ekipteki tüm hareketleri bu ekranda görüyorsun.
+      </div>
+      <h2 className="h2" style={{ marginTop: 28 }}>Hesap</h2>
+      <div className="card list">
+        {samples > 0 && (
+          <button className="switch" onClick={() => { if (confirm(samples + ' örnek iş silinsin mi? Kendi eklediğiniz işler silinmez.')) deleteSamples(); }}>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600, color: 'var(--alert-ink)' }}>Örnek işleri sil ({samples})</span><span className="tiny">Uygulamayı tanımanız için eklenen örnek işler</span></span>
+          </button>
+        )}
+        <button className="switch" onClick={() => { if (confirm('Çıkış yapılsın mı?')) signOut(auth); }}>
+          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600 }}>Çıkış yap</span><span className="tiny">{(profile && profile.name) || ''} · {user.email}</span></span>
+          <Icon name="logout" size={20} />
+        </button>
       </div>
       <Nav active="/bildirimler" />
     </div>

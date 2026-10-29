@@ -41,6 +41,11 @@ export default function Firmalar() {
         <button className="btn sm" onClick={() => setAdding(!adding)} style={{ color: 'var(--moss)' }}><Icon name="plus" size={18} />Firma ekle</button>
       </div>
 
+      <div className="grid2" style={{ marginTop: 16 }}>
+        <a href="#/galeri" className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 14 }}><Icon name="star" size={20} color="var(--moss)" />Galeri</a>
+        <a href="#/performans" className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 14 }}><Icon name="ig" size={20} color="var(--moss)" />Instagram</a>
+      </div>
+
       {adding && (
         <form onSubmit={create} className="card pad stack" style={{ marginTop: 16, gap: 12 }}>
           <div className="field"><label className="label" htmlFor="fn">Firma adı</label><input id="fn" className="input" value={name} onChange={(e) => setName(e.target.value)} required autoFocus /></div>

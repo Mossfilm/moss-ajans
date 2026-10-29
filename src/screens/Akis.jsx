@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useStore } from '../store.jsx';
-import { Nav, Fab, TaskRow, Logo, Icon } from '../components/ui.jsx';
+import { Nav, Fab, TaskRow, Logo, Icon, BellButton } from '../components/ui.jsx';
+import { PostPreview } from '../components/Post.jsx';
 import { todayYmd, ymd, addDays, dayLabel, DAYS, MONTHS, upcomingSpecialDays, shortDate, parseYmd } from '../data.js';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase.js';
 
 const byTime = (a, b) => ((a.date + (a.time || '99')) < (b.date + (b.time || '99')) ? -1 : 1);
 
 export default function Akis() {
-  const { tasks, firms, profile } = useStore();
+  const { tasks, firms, gallery } = useStore();
   const [tab, setTab] = useState('bugun');
   const t0 = todayYmd();
   const end = ymd(addDays(new Date(), 6));
@@ -42,9 +41,7 @@ export default function Akis() {
           <span className="eyebrow">Moss Ajans</span>
           <span className="small">{DAYS[now.getDay()]}, {now.getDate()} {MONTHS[now.getMonth()]}</span>
         </div>
-        <button className="icon-btn" aria-label={'Çıkış yap (' + ((profile && profile.name) || '') + ')'} onClick={() => { if (confirm('Çıkış yapılsın mı?')) signOut(auth); }}>
-          <Icon name="logout" size={20} />
-        </button>
+        <BellButton />
       </div>
       <h1 className="h1">{headline}</h1>
 
@@ -55,6 +52,27 @@ export default function Akis() {
 
       {tab === 'bugun' && (
         <>
+          <a href="#/cekim-plani" className="dark-card" style={{ marginTop: 16 }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="camera" size={20} color="#fff" /></span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600 }}>Bu haftanın çekim planı</span><span className="sub">Stok ve özel günlere göre öneriler</span></span>
+            <Icon name="right" size={18} color="#fff" />
+          </a>
+          {gallery.length > 0 && (
+            <>
+              <div className="row-h2"><h2 className="h2">Galeriden son içerikler</h2><a className="link" href="#/galeri">Tümü ({gallery.length})</a></div>
+              <div className="chips">
+                {gallery.slice(0, 8).map((g) => {
+                  const f = firms.find((x) => x.id === g.firmId);
+                  return (
+                    <a key={g.id} href={'#/galeri/' + g.id} style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 6, width: 120 }}>
+                      {g.kind === 'video' ? <span className="card" style={{ width: 120, height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="camera" /></span> : <PostPreview spec={g.spec || {}} firm={f} width={120} radius={12} />}
+                      <span className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Logo firm={f} size={16} radius={4} /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f ? f.name : ''}</span></span>
+                    </a>
+                  );
+                })}
+              </div>
+            </>
+          )}
           {overdue.length > 0 && (
             <>
               <div className="row-h2"><h2 className="h2" style={{ color: 'var(--alert-ink)' }}>Geciken işler</h2><span className="small">{overdue.length} iş</span></div>

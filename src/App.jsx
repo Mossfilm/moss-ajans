@@ -12,6 +12,10 @@ import Firma from './screens/Firma.jsx';
 import Is from './screens/Is.jsx';
 import IsForm from './screens/IsForm.jsx';
 import Bildirimler from './screens/Bildirimler.jsx';
+import Galeri, { GaleriItem } from './screens/Galeri.jsx';
+import Asistan from './screens/Asistan.jsx';
+import CekimPlani from './screens/CekimPlani.jsx';
+import Performans from './screens/Performans.jsx';
 
 function UpdateToast() {
   const { needRefresh: [need], updateServiceWorker } = useRegisterSW({
@@ -61,6 +65,11 @@ function Router() {
   if (a === 'yeni') return <IsForm q={r.q} />;
   if (a === 'duzenle' && b) return <IsForm id={b} q={r.q} />;
   if (a === 'bildirimler') return <Bildirimler />;
+  if (a === 'galeri' && b) return <GaleriItem id={b} />;
+  if (a === 'galeri') return <Galeri />;
+  if (a === 'asistan') return <Asistan />;
+  if (a === 'cekim-plani') return <CekimPlani />;
+  if (a === 'performans') return <Performans />;
   return <Akis />;
 }
 

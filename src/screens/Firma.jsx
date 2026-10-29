@@ -3,6 +3,7 @@ import { useStore, useSub } from '../store.jsx';
 import { Nav, Logo, Icon, TaskRow, back, Switch, initials } from '../components/ui.jsx';
 import { SECTORS, todayYmd, timeAgo } from '../data.js';
 import { packageProgress } from './Firmalar.jsx';
+import { GalleryGrid } from './Galeri.jsx';
 
 function Info({ firm }) {
   const { updateFirm, tasks } = useStore();
@@ -172,7 +173,7 @@ function Chat({ firm }) {
 }
 
 export default function Firma({ id }) {
-  const { firms, tasks } = useStore();
+  const { firms, tasks, gallery } = useStore();
   const [tab, setTab] = useState('genel');
   const firm = firms.find((f) => f.id === id);
   if (!firm) return <div className="screen"><button className="back" onClick={() => back('/firmalar')}><Icon name="left" size={20} />Firmalar</button><p className="small">Firma bulunamadı.</p><Nav active="/firmalar" /></div>;
@@ -182,7 +183,8 @@ export default function Firma({ id }) {
   const upcoming = ft.filter((t) => !t.done).sort((a, b) => ((a.date || '9') + (a.time || '') < (b.date || '9') + (b.time || '') ? -1 : 1));
   const done = ft.filter((t) => t.done).sort((a, b) => ((a.date || '') > (b.date || '') ? -1 : 1)).slice(0, 15);
   const sameBrand = firm.brand ? firms.filter((f) => f.brand === firm.brand && f.id !== firm.id) : [];
-  const tabs = [['genel', 'Genel'], ['isler', 'İşler'], ['fikir', 'Fikirler'], ['sohbet', 'Sohbet']];
+  const tabs = [['genel', 'Genel'], ['isler', 'İşler'], ['galeri', 'Galeri'], ['fikir', 'Fikirler'], ['sohbet', 'Sohbet']];
+  const fg = gallery.filter((g) => g.firmId === id);
 
   return (
     <div className="screen">
@@ -194,7 +196,7 @@ export default function Firma({ id }) {
           <span className="small">{firm.sector} · {upcoming.length} açık iş</span>
         </div>
       </div>
-      <div className="seg" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="seg" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
         {tabs.map(([k, l]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}
       </div>
 
@@ -217,6 +219,16 @@ export default function Firma({ id }) {
           <div className="stack">{upcoming.length ? upcoming.map((t) => <TaskRow key={t.id} t={t} showDate />) : <div className="card empty">Açık iş yok.</div>}</div>
           {done.length > 0 && <><h2 className="h2">Yapılanlar</h2><div className="stack">{done.map((t) => <TaskRow key={t.id} t={t} showDate />)}</div></>}
           {upcoming.some((t) => t.date && t.date < t0) && <p className="tiny" style={{ marginTop: 10 }}>Tarihi geçmiş açık işler en üstte.</p>}
+        </>
+      )}
+      {tab === 'galeri' && (
+        <>
+          <a href={'#/asistan?firma=' + id} className="dark-card" style={{ marginTop: 20, marginBottom: 14 }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" size={20} color="#fff" /></span>
+            <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600 }}>Asistandan post ya da video iste</span><span className="sub">Hazırlananlar bu galeriye düşer</span></span>
+            <Icon name="right" size={18} color="#fff" />
+          </a>
+          <GalleryGrid items={fg} firms={firms} />
         </>
       )}
       {tab === 'fikir' && <Ideas firm={firm} />}
