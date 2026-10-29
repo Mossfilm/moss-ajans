@@ -1,12 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from 'firebase/firestore';
 import { firebaseConfig } from './firebase-config.js';
 
-export const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+// Yerel test için: VITE_EMULATOR=1 ile çalıştırılırsa Firebase emülatörlerine bağlanır.
+const EMU = import.meta.env.VITE_EMULATOR === '1';
+const cfg = EMU ? { apiKey: 'demo-key', authDomain: 'localhost', projectId: 'demo-moss', appId: 'demo' } : firebaseConfig;
 
-export const app = isConfigured ? initializeApp(firebaseConfig) : null;
+export const isConfigured = Boolean(cfg.apiKey && cfg.projectId);
+
+export const app = isConfigured ? initializeApp(cfg) : null;
 export const auth = isConfigured ? getAuth(app) : null;
 export const db = isConfigured
-  ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+  ? initializeFirestore(app, EMU ? {} : { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
   : null;
+if (EMU) {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+}
