@@ -6,7 +6,9 @@ service cloud.firestore {
     function isTeam() {
       return request.auth != null
         && request.auth.token.email in [
-          'hello@mossfilmagency.com'
+          'hello@mossfilmagency.com',
+          'ebru27@gmail.com',
+          'bertan27@gmail.com'
         ];
     }
     match /{document=**} {
