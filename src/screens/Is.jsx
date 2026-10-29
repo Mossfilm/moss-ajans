@@ -1,0 +1,109 @@
+import { useState } from 'react';
+import { useStore, useSub } from '../store.jsx';
+import { Logo, Icon, TypePill, Check, back, go, assigneeLabel } from '../components/ui.jsx';
+import { STAGES, dayLabel } from '../data.js';
+import { Thread } from './Firma.jsx';
+
+export default function Is({ id }) {
+  const { tasks, firms, users, updateTask, setStage, toggleDone, deleteTask, addComment, addRevision } = useStore();
+  const t = tasks.find((x) => x.id === id);
+  const comments = useSub(['tasks', id, 'comments']);
+  const [item, setItem] = useState('');
+  if (!t) return <div className="screen no-nav"><button className="back" onClick={() => back()}><Icon name="left" size={20} />Geri</button><p className="small">İş bulunamadı ya da silindi.</p></div>;
+
+  const firm = firms.find((f) => f.id === t.firmId);
+  const stage = typeof t.stage === 'number' ? t.stage : 2;
+  const list = t.checklist || [];
+  const setList = (next) => updateTask(t.id, { checklist: next });
+  const addItem = (e) => { e.preventDefault(); if (item.trim()) { setList(list.concat({ id: Date.now().toString(36), label: item.trim(), done: false })); setItem(''); } };
+  const who = assigneeLabel(t, users) || 'Atanmadı';
+
+  return (
+    <div className="screen no-nav">
+      <div className="topbar">
+        <button className="back" onClick={() => back()}><Icon name="left" size={20} />Geri</button>
+        <a className="btn sm" href={'#/duzenle/' + t.id}><Icon name="edit" size={16} />Düzenle</a>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+        <a href={firm ? '#/firma/' + firm.id : '#/firmalar'} className="pill ok" style={{ gap: 6, padding: '4px 10px 4px 4px' }}><Logo firm={firm} size={22} />{firm ? firm.name : 'Firma yok'}</a>
+        <TypePill type={t.type} />
+        {t.done && <span className="pill ok">Tamamlandı</span>}
+      </div>
+      <h1 className="h1" style={{ fontSize: 30, lineHeight: '34px', margin: '12px 0 18px' }}>{t.title}</h1>
+
+      <div className="card pad">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <span className="small" style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Aşama</span>
+          <span className="small" style={{ fontWeight: 600, color: 'var(--moss)' }}>{stage + 1}/6 · {STAGES[stage].label}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+          {STAGES.map((s, i) => (
+            <button key={s.label} onClick={() => setStage(t, i)} aria-label={s.label + (i === stage ? ' (şu anki aşama)' : '')}
+              style={{ height: 44, border: 0, background: 'transparent', padding: 0, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center' }}>
+              <span style={{ height: 6, borderRadius: 3, background: i < stage ? '#7C9A74' : i === stage ? 'var(--moss)' : 'var(--track)' }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: i === stage ? 'var(--ink)' : 'var(--muted)', textAlign: 'left' }}>{s.short}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        {[['Tarih', t.date ? dayLabel(t.date) + (t.time ? ', ' + t.time : '') : 'Tarih yok'], ['Sorumlu', who], ['Konum', t.location || '—'], ['Teslim', t.deliver ? dayLabel(t.deliver) : '—']].map(([l, v], i) => (
+          <div key={l} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderRight: i % 2 === 0 ? '1px solid var(--line-2)' : 0, borderBottom: i < 2 ? '1px solid var(--line-2)' : 0 }}>
+            <span className="tiny">{l}</span><span style={{ fontSize: 15, fontWeight: 600 }}>{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <button className={'btn' + (t.done ? '' : ' primary')} style={{ width: '100%', marginTop: 12 }} onClick={() => toggleDone(t)}>
+        {t.done ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}
+      </button>
+
+      {t.note && <><h2 className="h2">Not</h2><p className="card pad" style={{ margin: 0, fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{t.note}</p></>}
+
+      <div className="row-h2"><h2 className="h2">Kontrol listesi</h2><span className="small">{list.length ? list.filter((c) => c.done).length + '/' + list.length + ' hazır' : ''}</span></div>
+      <div className="card list">
+        {list.map((c) => (
+          <div key={c.id} style={{ display: 'flex', alignItems: 'center' }}>
+            <button role="checkbox" aria-checked={c.done} onClick={() => setList(list.map((x) => (x.id === c.id ? { ...x, done: !x.done } : x)))}
+              style={{ flex: 1, minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', border: 0, background: 'transparent', textAlign: 'left', fontSize: 15 }}>
+              <Check on={c.done} /><span style={{ textDecoration: c.done ? 'line-through' : 'none', color: c.done ? 'var(--muted)' : 'var(--ink)' }}>{c.label}</span>
+            </button>
+            <button aria-label={c.label + ' maddesini sil'} onClick={() => setList(list.filter((x) => x.id !== c.id))} style={{ width: 44, height: 44, border: 0, background: 'transparent' }}><Icon name="trash" size={18} color="#7C857E" /></button>
+          </div>
+        ))}
+        <form onSubmit={addItem} style={{ display: 'flex', gap: 8, padding: 10 }}>
+          <label htmlFor="mad" className="sr">Yeni madde</label>
+          <input id="mad" className="input" style={{ height: 44 }} placeholder="Madde ekle (örn. yaka mikrofonu)" value={item} onChange={(e) => setItem(e.target.value)} />
+          <button className="btn sm" type="submit" style={{ height: 44 }}>Ekle</button>
+        </form>
+      </div>
+
+      {t.approval !== false && stage >= 3 && (
+        <>
+          <h2 className="h2">Müşteri onayı</h2>
+          <div className="card pad stack" style={{ gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}><span style={{ color: 'var(--ink-2)' }}>Onay veren</span><b>{(firm && firm.approver) || 'Firma sayfasından ekle'}</b></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}><span style={{ color: 'var(--ink-2)' }}>Revize sayısı</span><b>{t.revisions || 0}</b></div>
+            {stage === 3 && <button className="btn primary" onClick={() => setStage(t, 4)}>Müşteriye onaya gönderildi</button>}
+            {stage === 4 && (
+              <div className="grid2">
+                <button className="btn danger" onClick={() => { const n = prompt('Firmanın revize notu (isteğe bağlı):', ''); if (n !== null) addRevision(t, n.trim()); }}>Revize istendi</button>
+                <button className="btn primary" onClick={() => setStage(t, 5)}>Onaylandı</button>
+              </div>
+            )}
+            {stage === 5 && <span className="pill ok" style={{ alignSelf: 'flex-start' }}>Onaylandı, yayına hazır</span>}
+          </div>
+        </>
+      )}
+
+      <div className="row-h2"><h2 className="h2">Yorumlar</h2><span className="small">{comments.length ? comments.length + ' yorum' : ''}</span></div>
+      <Thread items={comments} onSend={(text) => addComment(t, text)} placeholder="Yorum yaz…" emptyText="Henüz yorum yok." />
+
+      <button className="btn danger" style={{ width: '100%', marginTop: 28 }} onClick={() => { if (confirm('Bu iş silinsin mi? Geri alınamaz.')) { deleteTask(t.id); go('/'); } }}>
+        <Icon name="trash" size={18} />İşi sil
+      </button>
+    </div>
+  );
+}

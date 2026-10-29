@@ -1,0 +1,16 @@
+rules_version = '2';
+// Firebase konsolu → Firestore Database → Kurallar (Rules) sekmesine bu dosyanın tamamı yapıştırılır.
+// Yalnızca aşağıdaki listedeki e-postalarla giriş yapan ekip üyeleri veriyi okuyup yazabilir.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isTeam() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'hello@mossfilmagency.com'
+        ];
+    }
+    match /{document=**} {
+      allow read, write: if isTeam();
+    }
+  }
+}
