@@ -11,7 +11,8 @@ const KIND = {
   comment: { label: 'Yorum', icon: 'msg', bg: '#DCE7F3', fg: '#1F4770' },
   approval: { label: 'Müşteri onayı', icon: 'shield', bg: '#ECE2F2', fg: '#5A2F73' },
   firm: { label: 'Firma', icon: 'building', bg: '#F6E3CF', fg: '#7A3E0C' },
-  gallery: { label: 'Galeri', icon: 'star', bg: '#E3EADB', fg: '#2F4A2C' }
+  gallery: { label: 'Galeri', icon: 'star', bg: '#E3EADB', fg: '#2F4A2C' },
+  edit: { label: 'Edit', icon: 'film', bg: '#ECE2F2', fg: '#5A2F73' }
 };
 
 export default function Bildirimler() {
@@ -34,7 +35,7 @@ export default function Bildirimler() {
           const k = KIND[a.kind] || KIND.task;
           const unread = a.atMs > seen && a.by !== user.uid;
           const firm = firms.find((f) => f.id === a.firmId);
-          const href = a.taskId ? '#/is/' + a.taskId : a.galleryId ? '#/galeri/' + a.galleryId : a.firmId ? '#/firma/' + a.firmId : '#/';
+          const href = a.projectId ? '#/edit/' + a.projectId : a.taskId ? '#/is/' + a.taskId : a.galleryId ? '#/galeri/' + a.galleryId : a.firmId ? '#/firma/' + a.firmId : '#/';
           return (
             <a key={a.id} href={href} className="card" style={{ display: 'flex', gap: 12, padding: 14, background: unread ? 'var(--surface)' : 'var(--surface-2)' }}>
               {firm ? <Logo firm={firm} size={40} radius={12} />

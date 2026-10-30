@@ -45,3 +45,15 @@ npm run build
 | `OPENAI_IMAGE_QUALITY` (isteğe bağlı) | `low`, `medium` (varsayılan) ya da `high` |
 
 Fonksiyonlar sürükle-bırak yüklemede çalışmaz; site GitHub bağlantısı ya da Netlify CLI ile yüklenmelidir.
+
+## Edit (video kurgu)
+- Alt menüde **Edit**: montaj projeleri + kütüphane (galeri).
+- Ham dosyalar Firebase Storage'a yüklenir (`storage.rules` kurallarıyla; Storage için Firebase Blaze planı gerekir).
+- `netlify/functions/kurgu.mjs`: Claude, montaj tarifinden zaman çizelgesi (kurgu planı) çıkarır.
+- `netlify/functions/render-background.mjs`: planı Shotstack'e gönderir, MP4 adresini projeye yazar.
+- Revize: yeni versiyon belgesi açılır, ad biçimi `Proje Adı (Etiket Vol N)`; önceki plan ve revize notu Claude'a verilir.
+
+| Ad | Değer |
+|---|---|
+| `SHOTSTACK_API_KEY` | shotstack.io panelindeki API anahtarı |
+| `SHOTSTACK_BASE` (isteğe bağlı) | Varsayılan `https://api.shotstack.io/stage` (filigranlı deneme); canlı için paneldeki üretim adresi |

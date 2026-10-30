@@ -1,0 +1,10 @@
+rules_version = '2';
+// Firebase konsolu → Storage → Kurallar (Rules) sekmesine yapıştırılır.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email in ['hello@mossfilmagency.com', 'ebru27@gmail.com', 'bertan27@gmail.com'];
+    }
+  }
+}

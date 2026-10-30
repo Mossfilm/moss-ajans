@@ -16,6 +16,7 @@ import Galeri, { GaleriItem } from './screens/Galeri.jsx';
 import Asistan from './screens/Asistan.jsx';
 import CekimPlani from './screens/CekimPlani.jsx';
 import Performans from './screens/Performans.jsx';
+import Edit, { EditProje } from './screens/Edit.jsx';
 
 function UpdateToast() {
   const { needRefresh: [need], updateServiceWorker } = useRegisterSW({
@@ -70,6 +71,8 @@ function Router() {
   if (a === 'asistan') return <Asistan />;
   if (a === 'cekim-plani') return <CekimPlani />;
   if (a === 'performans') return <Performans />;
+  if (a === 'edit' && b) return <EditProje id={b} />;
+  if (a === 'edit') return <Edit />;
   return <Akis />;
 }
 

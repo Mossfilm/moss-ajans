@@ -92,8 +92,8 @@ img { display: block; }
 
 /* alt menü */
 .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px calc(10px + var(--safe-b)); }
-.nav .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
-.nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--muted); height: 52px; }
+.nav .inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
+.nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--muted); height: 52px; }
 .nav a[aria-current="page"] { color: var(--moss); font-weight: 600; }
 .fab { position: fixed; right: max(20px, calc(50% - 260px)); bottom: calc(96px + var(--safe-b)); z-index: 21; width: 60px; height: 60px; border-radius: 20px; background: var(--moss); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(22, 32, 26, 0.25); border: 0; }
 

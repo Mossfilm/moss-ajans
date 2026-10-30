@@ -38,6 +38,7 @@ export function StoreProvider({ children }) {
   const [ready, setReady] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [gallery, setGallery] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u || null)), []);
 
@@ -73,6 +74,9 @@ export function StoreProvider({ children }) {
     unsubs.push(onSnapshot(doc(db, 'users', user.uid), (snap) => { setProfile(snap.exists() ? snap.data() : null); setProfileLoaded(true); }));
     unsubs.push(onSnapshot(collection(db, 'gallery'), (snap) => {
       setGallery(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
+    }));
+    unsubs.push(onSnapshot(collection(db, 'projects'), (snap) => {
+      setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
     }));
     // İlk kurulumda bir kez: örnek işler (galeri boş başlar; içerik istendiğinde üretilir)
     seedOnce(user).catch(() => {});
@@ -149,6 +153,31 @@ export function StoreProvider({ children }) {
       },
       updateGallery: (id, patch) => updateDoc(doc(db, 'gallery', id), patch),
       deleteGallery: (id) => deleteDoc(doc(db, 'gallery', id)),
+      addProject: async (p) => {
+        const ref = await addDoc(collection(db, 'projects'), {
+          files: [], brief: '', plan: null, renderStatus: '', outputUrl: '', version: 1, rootId: '', parentId: '', revisionLabel: '', revisionNote: '',
+          ...p, by: user.uid, byName: me().name, at: serverTimestamp()
+        });
+        if (!p.rootId) await updateDoc(ref, { rootId: ref.id });
+        log('edit', firmName(p.firmId) + ' için yeni kurgu projesi: ' + p.name, { firmId: p.firmId, projectId: ref.id });
+        return ref.id;
+      },
+      updateProject: (id, patch) => updateDoc(doc(db, 'projects', id), patch),
+      deleteProject: (id) => deleteDoc(doc(db, 'projects', id)),
+      reviseProject: async (prev, label, note, all) => {
+        const root = all.find((x) => x.id === (prev.rootId || prev.id)) || prev;
+        const version = Math.max(...all.filter((x) => (x.rootId || x.id) === root.id).map((x) => x.version || 1)) + 1;
+        const tag = (label || '').trim();
+        const base = prev.baseName || root.baseName || root.name;
+        const name = base + ' (' + (tag ? tag + ' ' : '') + 'Vol ' + version + ')';
+        const ref = await addDoc(collection(db, 'projects'), {
+          name, baseName: base, firmId: prev.firmId, files: prev.files || [], brief: prev.brief || '', plan: prev.plan || null,
+          renderStatus: '', outputUrl: '', version, rootId: root.id, parentId: prev.id, revisionLabel: tag, revisionNote: note || '',
+          by: user.uid, byName: me().name, at: serverTimestamp()
+        });
+        log('edit', 'Revize açıldı: ' + name, { firmId: prev.firmId, projectId: ref.id });
+        return ref.id;
+      },
       deleteSamples: async () => {
         const snap = await getDocs(collection(db, 'tasks'));
         const b = writeBatch(db);
@@ -159,7 +188,7 @@ export function StoreProvider({ children }) {
     };
   }, [user, profile, firms]);
 
-  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, ready, ...api };
+  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, ready, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

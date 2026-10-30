@@ -46,6 +46,9 @@ const P = {
   shield: <><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /><path d="M9 12l2 2 4-4" /></>,
   star: <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />,
   logout: <><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10" /></>,
+  film: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M7 3v18M17 3v18M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4" /></>,
+  upload: <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></>,
+  music: <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>,
   ig: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" /></>
 };
 export function Icon({ name, size = 22, color = 'currentColor', width = 2 }) {
@@ -130,7 +133,7 @@ export function Nav({ active }) {
   const unread = useUnread();
   const items = [
     ['/', 'home', 'Akış'], ['/takvim', 'cal', 'Takvim'], ['/uretim', 'flow', 'Üretim'],
-    ['/firmalar', 'building', 'Firmalar'], ['/asistan', 'sparkle', 'Asistan']
+    ['/firmalar', 'building', 'Firmalar'], ['/edit', 'film', 'Edit'], ['/asistan', 'sparkle', 'Asistan']
   ];
   return (
     <nav className="nav" aria-label="Ana menü">
