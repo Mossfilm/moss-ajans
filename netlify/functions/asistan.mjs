@@ -4,6 +4,8 @@
 //   FIREBASE_API_KEY   : src/firebase-config.js içindeki apiKey (giriş doğrulaması için)
 //   ALLOWED_EMAILS     : virgülle ayrılmış ekip e-postaları
 // İsteğe bağlı: CLAUDE_MODEL (varsayılan claude-sonnet-5-5)
+// Görseller: OPENAI_API_KEY tanımlıysa post görselleri ChatGPT'nin görsel modeline çizdirilir (gorsel-background).
+import { verify } from './lib/auth.mjs';
 
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
 
@@ -16,7 +18,7 @@ const TOOLS = [
       properties: {
         firmId: { type: 'string', description: 'Firma kimliği (bağlamdaki firms listesinden id)' },
         title: { type: 'string', description: 'Galeride görünecek kısa başlık' },
-        template: { type: 'string', enum: ['anma', 'kutlama', 'duyuru', 'urun', 'alinti'], description: 'anma: siyah-beyaz anma günleri; kutlama: bayram ve özel günler; duyuru: kampanya, kayıt, sınav sonucu; urun: yemek/ürün; alinti: söz veya müşteri yorumu' },
+        template: { type: 'string', enum: ['gorsel', 'anma', 'kutlama', 'duyuru', 'urun', 'alinti'], description: 'gorsel: ChatGPT ile çizilen tam tasarım (görsel modeli bağlıysa her zaman bunu kullan); anma: siyah-beyaz anma günleri; kutlama: bayram ve özel günler; duyuru: kampanya, kayıt, sınav sonucu; urun: yemek/ürün; alinti: söz veya müşteri yorumu' },
         format: { type: 'string', enum: ['kare', 'dikey', 'hikaye'] },
         eyebrow: { type: 'string', description: 'Üstteki kısa etiket, en fazla 4 kelime' },
         headline: { type: 'string', description: 'Ana başlık, en fazla 8 kelime. Satır kırmak için \\n kullan.' },
@@ -24,6 +26,7 @@ const TOOLS = [
         foot: { type: 'string', description: 'Alt bilgi: firma adı, şube ya da çağrı' },
         caption: { type: 'string', description: 'Instagram paylaşım metni' },
         tags: { type: 'string', description: 'Hashtagler, boşlukla ayrılmış' },
+        image_prompt: { type: 'string', description: 'ChatGPT görsel modeline gidecek, İNGİLİZCE yazılmış ayrıntılı tasarım tarifi: kompozisyon, stil, ışık, renkler (firmanın marka renkleri hex olarak), tipografi. Görselin üzerinde yazacak Türkçe metni tırnak içinde, Türkçe karakterleriyle aynen ver. Logo çizdirme; köşede logo için boş alan bırak (logo uygulama tarafından eklenir). Gerçek kişi yüzü, marka logosu ya da telifli karakter isteme.' },
         date: { type: 'string', description: 'Önerilen paylaşım tarihi YYYY-MM-DD' },
         time: { type: 'string', description: 'Önerilen saat HH:MM' }
       },
@@ -84,6 +87,10 @@ function system(ctx) {
     'Görevin: firmalar için içerik fikri üretmek, fikirleri ekiple tartışmak, istenince post ve video hazırlayıp galeriye eklemek, takvime iş eklemek.',
     'Kurallar:',
     '- Post ve video istendiğinde create_post / create_video araçlarını kullan; birden fazla firma istenirse her firma için ayrı çağır.',
+    ctx.imagesEnabled
+      ? '- Görselleri ChatGPT (OpenAI görsel modeli) çiziyor: her create_post için mutlaka image_prompt yaz ve template olarak "gorsel" kullan. Her firmanın tasarımı kendi sektörüne ve marka renklerine özgü olsun; aynı tasarımı firmalar arasında kopyalama.'
+      : '- Görsel modeli bağlı değil: create_post için hazır şablonlardan (anma, kutlama, duyuru, urun, alinti) uygun olanı seç; image_prompt yazma.',
+    '- Yalnızca kullanıcının istediği içeriği üret; istenmeyen ek post ya da video hazırlama.',
     '- Bilmediğin bilgileri uydurma: fiyat, adres, telefon, sınav sonucu, öğretmen adı gibi bilgiler için [FİYAT], [ADRES] gibi yer tutucu bırak.',
     '- Anma günlerinde (10 Kasım gibi) anma şablonunu ve ağırbaşlı bir dil kullan; kutlama dili kullanma.',
     '- Gerçek kişilerin fotoğrafını ya da sözünü kullanma; Atatürk’e ait söz eklemek istersen yalnızca çok bilinen ve doğruluğundan emin olduğun bir söz kullan, emin değilsen ekleme.',
@@ -98,19 +105,6 @@ function system(ctx) {
     'Önümüzdeki işler: ' + JSON.stringify(ctx.tasks || []),
     'Yaklaşan özel günler: ' + JSON.stringify(ctx.special || [])
   ].filter(Boolean).join('\n');
-}
-
-async function verify(idToken) {
-  const key = process.env.FIREBASE_API_KEY;
-  if (!key || !idToken) return null;
-  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + key, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken })
-  });
-  if (!r.ok) return null;
-  const j = await r.json();
-  const email = j.users && j.users[0] && (j.users[0].email || '').toLowerCase();
-  const allowed = (process.env.ALLOWED_EMAILS || '').toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
-  return email && allowed.includes(email) ? email : null;
 }
 
 async function claude(body) {
@@ -136,7 +130,8 @@ export default async (req) => {
   const messages = (input.messages || []).slice(-20).map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.text || '') })).filter((m) => m.content);
   if (!messages.length) return Response.json({ error: 'bad_request' }, { status: 400 });
 
-  const sys = system(input.context || {});
+  const ctx = { ...(input.context || {}), imagesEnabled: Boolean(process.env.OPENAI_API_KEY) };
+  const sys = system(ctx);
   const actions = [];
   let convo = messages;
   let reply = '';
@@ -156,5 +151,5 @@ export default async (req) => {
   } catch (e) {
     return Response.json({ error: 'api', message: e.message }, { status: 502 });
   }
-  return Response.json({ reply: reply || 'Tamam.', actions });
+  return Response.json({ reply: reply || 'Tamam.', actions, imagesEnabled: ctx.imagesEnabled });
 };

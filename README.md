@@ -30,3 +30,18 @@ npm run build
 - Telefona düşen bildirimler (Firebase Cloud Messaging + zamanlanmış hatırlatmalar)
 - Uygulama içi yapay zekâ asistanı (Claude API)
 - Instagram takipçi ve izlenme sayaçları
+
+## Claude + ChatGPT
+- **Claude** (`netlify/functions/asistan.mjs`): sohbet, fikir, metin, senaryo; uygulamada iş ve galeri kaydı oluşturur.
+- **ChatGPT görselleri** (`netlify/functions/gorsel-background.mjs`): Claude'un yazdığı tasarım tarifini OpenAI görsel modeline (varsayılan `gpt-image-2`, orta kalite) çizdirir, görseli Netlify Blobs'a kaydeder ve galeri kaydına bağlar. Firma logosu görselin köşesine uygulama tarafından eklenir.
+
+### Netlify ortam değişkenleri
+| Ad | Değer |
+|---|---|
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+| `OPENAI_API_KEY` | platform.openai.com → API keys |
+| `FIREBASE_API_KEY` | `src/firebase-config.js` içindeki apiKey |
+| `ALLOWED_EMAILS` | `hello@mossfilmagency.com,ebru27@gmail.com,bertan27@gmail.com` |
+| `OPENAI_IMAGE_QUALITY` (isteğe bağlı) | `low`, `medium` (varsayılan) ya da `high` |
+
+Fonksiyonlar sürükle-bırak yüklemede çalışmaz; site GitHub bağlantısı ya da Netlify CLI ile yüklenmelidir.

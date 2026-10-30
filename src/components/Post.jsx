@@ -23,6 +23,7 @@ export const FORMATS = {
 };
 
 export const TEMPLATES = {
+  gorsel: 'ChatGPT görseli',
   anma: 'Anma (siyah-beyaz)',
   kutlama: 'Özel gün kutlama',
   duyuru: 'Duyuru / kampanya',
@@ -46,6 +47,23 @@ export function PostArt({ spec, firm }) {
   const base = { width: f.w, height: f.h, boxSizing: 'border-box', position: 'relative', overflow: 'hidden', fontFamily: BODY };
   const name = firm ? firm.name : '';
   const t = spec.template || 'duyuru';
+
+  if (t === 'gorsel') {
+    const ready = Boolean(spec.imageUrl);
+    return (
+      <div style={{ ...base, background: ready ? '#000' : b.bg, color: b.fg }}>
+        {ready
+          ? <img src={spec.imageUrl} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          : (
+            <div style={{ position: 'absolute', inset: 0, padding: pad, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 36 }}>
+              <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: 6, textTransform: 'uppercase', color: b.accent }}>{spec.imageStatus === 'hata' ? 'Görsel çizilemedi' : 'ChatGPT görseli çiziyor…'}</span>
+              <span style={{ fontFamily: DISPLAY, fontSize: 104, lineHeight: 1.04, fontWeight: 800, whiteSpace: 'pre-line' }}>{spec.headline}</span>
+            </div>
+          )}
+        <div style={{ position: 'absolute', right: 56, bottom: 56 }}><LogoTile firm={firm} size={150} ring="#FFFFFF" /></div>
+      </div>
+    );
+  }
 
   if (t === 'anma') {
     return (
@@ -126,6 +144,17 @@ export function PostArt({ spec, firm }) {
       <span style={{ position: 'relative', alignSelf: 'flex-start', padding: '22px 36px', borderRadius: 999, background: b.bg, color: b.fg, fontSize: 34, fontWeight: 700 }}>{spec.foot || name}</span>
     </div>
   );
+}
+
+// ChatGPT görsel çizimini başlat (arka planda çalışır; sonuç galeri kaydına yazılır)
+export async function startDrawing(galleryId, prompt, format) {
+  const { auth } = await import('../firebase.js');
+  const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+  const r = await fetch('/.netlify/functions/gorsel-background', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ galleryId, prompt, format, idToken })
+  });
+  return r.ok || r.status === 202;
 }
 
 // Ölçeklenmiş önizleme

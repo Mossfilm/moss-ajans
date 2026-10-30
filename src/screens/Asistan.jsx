@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
-import { PostPreview } from '../components/Post.jsx';
+import { PostPreview, startDrawing } from '../components/Post.jsx';
 import { todayYmd, ymd, addDays, upcomingSpecialDays, TYPES } from '../data.js';
 import { auth } from '../firebase.js';
 
@@ -45,9 +45,12 @@ export default function Asistan() {
     for (const a of actions) {
       try {
         if (a.type === 'create_post') {
-          const { type, firmId, title, caption, tags, date, time, ...spec } = a;
-          const id = await addGallery({ firmId, kind: 'post', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: 'asistan', spec });
-          done.push({ kind: 'post', id, firmId, title, spec });
+          const { type, firmId, title, caption, tags, date, time, image_prompt, ...rest } = a;
+          const draw = Boolean(image_prompt);
+          const spec = { ...rest, template: draw ? 'gorsel' : (rest.template === 'gorsel' ? 'duyuru' : rest.template), imagePrompt: image_prompt || '' };
+          const id = await addGallery({ firmId, kind: 'post', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: draw ? 'chatgpt' : 'asistan', spec, imageStatus: draw ? 'hazirlaniyor' : '' });
+          if (draw) startDrawing(id, image_prompt, spec.format).catch(() => {});
+          done.push({ kind: 'post', id, firmId, title, spec, draw });
         } else if (a.type === 'create_video') {
           const { firmId, title, scenes, music, caption, tags, date, time } = a;
           const id = await addGallery({ firmId, kind: 'video', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: 'asistan', spec: { scenes: scenes || [], music: music || '' } });
@@ -130,7 +133,7 @@ export default function Asistan() {
                         {d.kind === 'post' && d.spec ? <PostPreview spec={d.spec} firm={f} width={56} radius={8} /> : <Logo firm={f} size={40} radius={10} />}
                         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 14, fontWeight: 600 }}>{d.title}</span>
-                          <span className="tiny">{(f ? f.name + ' · ' : '') + (d.kind === 'post' ? 'Post galeriye eklendi' : d.kind === 'video' ? 'Video galeriye eklendi' : 'Takvime eklendi')}</span>
+                          <span className="tiny">{(f ? f.name + ' · ' : '') + (d.kind === 'post' ? (d.draw ? 'ChatGPT görseli çiziyor, bitince galeride' : 'Post galeriye eklendi') : d.kind === 'video' ? 'Video galeriye eklendi' : 'Takvime eklendi')}</span>
                         </span>
                         <Icon name="right" size={16} color="#7C857E" />
                       </a>
@@ -143,7 +146,7 @@ export default function Asistan() {
         {busy && <div role="status" aria-label="Asistan yazıyor" className="card" style={{ alignSelf: 'flex-start', padding: '14px 16px', borderRadius: '4px 18px 18px 18px', display: 'flex', gap: 5 }}><span className="dot" /><span className="dot" /><span className="dot" /></div>}
         {setup && (
           <div className="card pad small" style={{ lineHeight: '19px' }}>
-            Kurulum notu: Asistanın çalışması için Netlify’a <b>ANTHROPIC_API_KEY</b>, <b>FIREBASE_API_KEY</b> ve <b>ALLOWED_EMAILS</b> ayarlarının girilmesi ve uygulamanın GitHub ya da Netlify CLI ile yüklenmesi gerekiyor.
+            Kurulum notu: Asistanın çalışması için Netlify’a <b>ANTHROPIC_API_KEY</b> (Claude), <b>OPENAI_API_KEY</b> (ChatGPT görselleri), <b>FIREBASE_API_KEY</b> ve <b>ALLOWED_EMAILS</b> ayarlarının girilmesi ve uygulamanın GitHub ya da Netlify CLI ile yüklenmesi gerekiyor.
           </div>
         )}
         <div ref={endRef} />

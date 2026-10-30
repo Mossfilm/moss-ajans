@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go, useRoute } from '../components/ui.jsx';
-import { PostPreview, VideoPlayer, downloadPost, FORMATS, TEMPLATES } from '../components/Post.jsx';
+import { PostPreview, VideoPlayer, downloadPost, startDrawing, FORMATS, TEMPLATES } from '../components/Post.jsx';
 import { shortDate } from '../data.js';
 
 const STATUS = [['taslak', 'Taslak'], ['onaylandi', 'Onaylandı'], ['paylasildi', 'Paylaşıldı']];
@@ -38,7 +38,7 @@ function GridThumb({ g, firm }) {
     <div ref={(el) => { if (el && el.clientWidth !== w) setW(el.clientWidth); }} style={{ width: '100%', background: '#111' }}>
       {w > 0 && (g.kind === 'video'
         ? <VideoThumb g={g} firm={firm} width={w} />
-        : <PostPreview spec={g.spec || {}} firm={firm} width={w} radius={0} />)}
+        : <PostPreview spec={{ ...(g.spec || {}), imageStatus: g.imageStatus }} firm={firm} width={w} radius={0} />)}
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function GaleriItem({ id }) {
   const [w, setW] = useState(0);
   if (!g) return <div className="screen no-nav"><button className="back" onClick={() => back('/galeri')}><Icon name="left" size={20} />Galeri</button><p className="small">İçerik bulunamadı ya da silindi.</p></div>;
   const firm = firms.find((f) => f.id === g.firmId);
-  const spec = g.spec || {};
+  const spec = { ...(g.spec || {}), imageStatus: g.imageStatus };
   const text = (g.caption || '') + (g.tags ? '\n\n' + g.tags : '');
 
   return (
@@ -111,6 +111,14 @@ export function GaleriItem({ id }) {
           : <PostPreview spec={spec} firm={firm} width={Math.min(w, 520)} />)}
       </div>
 
+      {g.imageStatus === 'hazirlaniyor' && <p className="small" role="status" style={{ textAlign: 'center', marginTop: 10 }}>ChatGPT görseli çiziyor. Genelde 30–60 saniye sürer; bu sayfa kendiliğinden güncellenir.</p>}
+      {g.imageStatus === 'hata' && <p className="err" role="alert" style={{ marginTop: 10 }}>Görsel çizilemedi: {g.imageError || 'bilinmeyen hata'}</p>}
+      {spec.imagePrompt && g.imageStatus !== 'hazirlaniyor' && (
+        <button className="btn" style={{ width: '100%', marginTop: 10, color: 'var(--moss)' }}
+          onClick={async () => { await updateGallery(g.id, { imageStatus: 'hazirlaniyor', imageError: '' }); startDrawing(g.id, spec.imagePrompt, spec.format).catch(() => updateGallery(g.id, { imageStatus: 'hata', imageError: 'Bağlantı kurulamadı' })); }}>
+          <Icon name="sparkle" size={18} />ChatGPT ile yeniden çiz
+        </button>
+      )}
       {g.kind !== 'video' && (
         <button className="btn primary" style={{ width: '100%', marginTop: 14 }} disabled={busy}
           onClick={async () => { setBusy(true); try { await downloadPost(spec, firm, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { alert('İndirilemedi: ' + e.message); } setBusy(false); }}>
