@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['logos/*.png', 'icons/*.png'],
+      includeAssets: ['logos/*.png', 'icons/*.png', 'push-sw.js'],
       manifest: {
         name: 'Moss Ajans',
         short_name: 'Moss',
@@ -25,7 +25,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
-        navigateFallback: '/index.html'
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/\.netlify\//],
+        importScripts: ['push-sw.js']
       }
     })
   ]

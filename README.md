@@ -26,10 +26,6 @@ npm run dev
 npm run build
 ```
 
-## Sonraki adımlar
-- Telefona düşen bildirimler (Firebase Cloud Messaging + zamanlanmış hatırlatmalar)
-- Uygulama içi yapay zekâ asistanı (Claude API)
-- Instagram takipçi ve izlenme sayaçları
 
 ## Claude + ChatGPT
 - **Claude** (`netlify/functions/asistan.mjs`): sohbet, fikir, metin, senaryo; uygulamada iş ve galeri kaydı oluşturur.
@@ -57,3 +53,20 @@ Fonksiyonlar sürükle-bırak yüklemede çalışmaz; site GitHub bağlantısı 
 |---|---|
 | `SHOTSTACK_API_KEY` | shotstack.io panelindeki API anahtarı |
 | `SHOTSTACK_BASE` (isteğe bağlı) | Varsayılan `https://api.shotstack.io/stage` (filigranlı deneme); canlı için paneldeki üretim adresi |
+
+## Telefon bildirimleri ve Instagram sayaçları
+- `netlify/functions/hatirlatma.mjs` (saatlik): sabah özeti, çekim sabahı, “Yaptın mı?”, yarınki işler, özel günler, haftalık çekim planı. 22:00–08:00 sessiz.
+- `netlify/functions/instagram.mjs` (her gün 06:15): Meta Business Discovery ile takipçi ve son paylaşım sayıları → `insta/{firmaId}`.
+- Abonelik: uygulamada Bildirimler → Telefon bildirimleri → Aç. iPhone'da uygulama ana ekrana eklenmiş olmalı (iOS 16.4+).
+
+| Ad | Değer |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase → Proje ayarları → Hizmet hesapları → Yeni özel anahtar (JSON'un tamamı) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | `npx web-push generate-vapid-keys` çıktısı |
+| `META_ACCESS_TOKEN` | Meta uzun ömürlü kullanıcı jetonu (instagram_basic, pages_show_list izinleri) |
+| `META_IG_USER_ID` | Moss'un Instagram işletme hesabının kimliği |
+| `META_GRAPH_VERSION` (isteğe bağlı) | Varsayılan `v23.0` |
+
+## Test
+- `npx vite -c vite.test.config.js`: Firebase ve sunucu fonksiyonları bellekte taklit edilerek uygulama yerelde açılır (`test/fake/`).
+- Uçtan uca mobil test senaryosu 35 kontrol: kayıt, iş, yorum, revize, firma, takvim, üretim, çekim planı, Instagram, asistan, galeri, edit + revize, bildirimler, çıkış.

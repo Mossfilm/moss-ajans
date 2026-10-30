@@ -39,6 +39,8 @@ export function StoreProvider({ children }) {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [gallery, setGallery] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [insta, setInsta] = useState({});
+  const [pushSub, setPushSub] = useState(null);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u || null)), []);
 
@@ -53,12 +55,20 @@ export function StoreProvider({ children }) {
         const b = writeBatch(db);
         SEED_FIRMS.forEach((f, i) => {
           const { id, ...rest } = f;
-          b.set(doc(db, 'firms', id), { ...rest, order: i, instagram: '', contact: '', phone: '', approver: '', notes: '', services: [], package: { gonderi: 0, reels: 0, hikaye: 0, cekim: 0 }, createdAt: serverTimestamp() });
+          b.set(doc(db, 'firms', id), { instagram: '', contact: '', phone: '', approver: '', notes: '', services: [], package: { gonderi: 0, reels: 0, hikaye: 0, cekim: 0 }, ...rest, order: i, igSeeded: true, createdAt: serverTimestamp() });
         });
         await b.commit();
         return;
       }
-      setFirms(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 99) - (b.order ?? 99)));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Sonradan eklenen hazır bilgileri (Instagram linkleri) mevcut firmalara bir kez işle
+      list.forEach((f) => {
+        const seed = SEED_FIRMS.find((x) => x.id === f.id);
+        if (seed && seed.instagram && !f.igSeeded && !snap.metadata.fromCache) {
+          updateDoc(doc(db, 'firms', f.id), { igSeeded: true, ...(f.instagram ? {} : { instagram: seed.instagram }) }).catch(() => {});
+        }
+      });
+      setFirms(list.sort((a, b) => (a.order ?? 99) - (b.order ?? 99)));
       gotFirms = true; mark();
     }));
     unsubs.push(onSnapshot(collection(db, 'tasks'), (snap) => {
@@ -78,6 +88,10 @@ export function StoreProvider({ children }) {
     unsubs.push(onSnapshot(collection(db, 'projects'), (snap) => {
       setProjects(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
     }));
+    unsubs.push(onSnapshot(collection(db, 'insta'), (snap) => {
+      const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); }); setInsta(m);
+    }));
+    unsubs.push(onSnapshot(doc(db, 'pushSubs', user.uid), (snap) => setPushSub(snap.exists() ? snap.data() : null)));
     // İlk kurulumda bir kez: örnek işler (galeri boş başlar; içerik istendiğinde üretilir)
     seedOnce(user).catch(() => {});
     return () => unsubs.forEach((u) => u());
@@ -178,6 +192,8 @@ export function StoreProvider({ children }) {
         log('edit', 'Revize açıldı: ' + name, { firmId: prev.firmId, projectId: ref.id });
         return ref.id;
       },
+      savePush: (data) => setDoc(doc(db, 'pushSubs', user.uid), { email: user.email, name: me().name, ...data }, { merge: true }),
+      removePush: () => deleteDoc(doc(db, 'pushSubs', user.uid)),
       deleteSamples: async () => {
         const snap = await getDocs(collection(db, 'tasks'));
         const b = writeBatch(db);
@@ -188,7 +204,7 @@ export function StoreProvider({ children }) {
     };
   }, [user, profile, firms]);
 
-  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, ready, ...api };
+  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, insta, pushSub, ready, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

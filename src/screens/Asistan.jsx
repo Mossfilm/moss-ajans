@@ -44,18 +44,18 @@ export default function Asistan() {
     const done = [];
     for (const a of actions) {
       try {
-        if (a.type === 'create_post') {
-          const { type, firmId, title, caption, tags, date, time, image_prompt, ...rest } = a;
+        if (a.action === 'create_post') {
+          const { action, firmId, title, caption, tags, date, time, image_prompt, ...rest } = a;
           const draw = Boolean(image_prompt);
           const spec = { ...rest, template: draw ? 'gorsel' : (rest.template === 'gorsel' ? 'duyuru' : rest.template), imagePrompt: image_prompt || '' };
           const id = await addGallery({ firmId, kind: 'post', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: draw ? 'chatgpt' : 'asistan', spec, imageStatus: draw ? 'hazirlaniyor' : '' });
           if (draw) startDrawing(id, image_prompt, spec.format).catch(() => {});
           done.push({ kind: 'post', id, firmId, title, spec, draw });
-        } else if (a.type === 'create_video') {
+        } else if (a.action === 'create_video') {
           const { firmId, title, scenes, music, caption, tags, date, time } = a;
           const id = await addGallery({ firmId, kind: 'video', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: 'asistan', spec: { scenes: scenes || [], music: music || '' } });
           done.push({ kind: 'video', id, firmId, title });
-        } else if (a.type === 'create_task') {
+        } else if (a.action === 'create_task') {
           const STAGE = { cekim: 2, gonderi: 3, reels: 3, hikaye: 3, kurgu: 3, tasarim: 3, reklam: 3 };
           const id = await addTask({ firmId: a.firmId, title: a.title, type: a.type in TYPES ? a.type : 'diger', date: a.date || '', time: a.time || '', note: a.note || '', assignees: [], approval: true, stage: a.type in STAGE ? STAGE[a.type] : null, location: '', deliver: '' });
           done.push({ kind: 'task', id, firmId: a.firmId, title: a.title, date: a.date });

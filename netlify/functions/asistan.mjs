@@ -142,7 +142,7 @@ export default async (req) => {
       const uses = res.content.filter((c) => c.type === 'tool_use');
       if (texts) reply = texts;
       if (res.stop_reason !== 'tool_use' || !uses.length) break;
-      uses.forEach((u) => actions.push({ type: u.name, ...u.input }));
+      uses.forEach((u) => actions.push({ ...u.input, action: u.name }));
       convo = convo.concat(
         { role: 'assistant', content: res.content },
         { role: 'user', content: uses.map((u) => ({ type: 'tool_result', tool_use_id: u.id, content: 'Tamamlandı, uygulamaya eklendi.' })) }

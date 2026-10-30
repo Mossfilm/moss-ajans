@@ -3,6 +3,7 @@ import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go, useRoute } from '../components/ui.jsx';
 import { PostPreview, VideoPlayer, downloadPost, startDrawing, FORMATS, TEMPLATES } from '../components/Post.jsx';
 import { shortDate } from '../data.js';
+import { useAsk } from '../components/Dialog.jsx';
 
 const STATUS = [['taslak', 'Taslak'], ['onaylandi', 'Onaylandı'], ['paylasildi', 'Paylaşıldı']];
 const statusPill = (s) => s === 'paylasildi' ? 'pill ok' : s === 'onaylandi' ? 'pill ok' : 'pill neutral';
@@ -87,6 +88,8 @@ export function GaleriItem({ id }) {
   const g = gallery.find((x) => x.id === id);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const ask = useAsk();
+  const [dlErr, setDlErr] = useState('');
   const [w, setW] = useState(0);
   if (!g) return <div className="screen no-nav"><button className="back" onClick={() => back('/galeri')}><Icon name="left" size={20} />Galeri</button><p className="small">İçerik bulunamadı ya da silindi.</p></div>;
   const firm = firms.find((f) => f.id === g.firmId);
@@ -121,10 +124,11 @@ export function GaleriItem({ id }) {
       )}
       {g.kind !== 'video' && (
         <button className="btn primary" style={{ width: '100%', marginTop: 14 }} disabled={busy}
-          onClick={async () => { setBusy(true); try { await downloadPost(spec, firm, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { alert('İndirilemedi: ' + e.message); } setBusy(false); }}>
+          onClick={async () => { setBusy(true); try { await downloadPost(spec, firm, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { setDlErr('İndirilemedi: ' + e.message); } setBusy(false); }}>
           {busy ? 'Hazırlanıyor…' : 'PNG olarak indir (' + (FORMATS[spec.format] || FORMATS.kare).w + '×' + (FORMATS[spec.format] || FORMATS.kare).h + ')'}
         </button>
       )}
+      {dlErr && <p className="err" role="alert" style={{ marginTop: 8 }}>{dlErr}</p>}
       {g.kind === 'video' && <p className="tiny" style={{ marginTop: 10 }}>Video şu an uygulama içinde oynatılabilir önizleme. MP4 olarak indirme, render servisi bağlanınca açılacak.</p>}
 
       <h2 className="h2">Durum</h2>
@@ -163,7 +167,7 @@ export function GaleriItem({ id }) {
 
       {g.kind !== 'video' && <p className="tiny" style={{ marginTop: 16 }}>Şablon: {TEMPLATES[spec.template] || spec.template} · Hazırlayan: {g.byName}</p>}
 
-      <button className="btn danger" style={{ width: '100%', marginTop: 24 }} onClick={() => { if (confirm('Bu içerik galeriden silinsin mi?')) { deleteGallery(g.id); go('/galeri'); } }}>
+      <button className="btn danger" style={{ width: '100%', marginTop: 24 }} onClick={async () => { if (await ask({ title: 'Galeriden silinsin mi?', message: '“' + g.title + '” kalıcı olarak silinir.', confirmText: 'Sil', danger: true })) { deleteGallery(g.id); go('/galeri'); } }}>
         <Icon name="trash" size={18} />Galeriden sil
       </button>
     </div>

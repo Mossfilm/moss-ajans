@@ -3,12 +3,14 @@ import { useStore, useSub } from '../store.jsx';
 import { Logo, Icon, TypePill, Check, back, go, assigneeLabel } from '../components/ui.jsx';
 import { STAGES, dayLabel } from '../data.js';
 import { Thread } from './Firma.jsx';
+import { useAsk } from '../components/Dialog.jsx';
 
 export default function Is({ id }) {
   const { tasks, firms, users, updateTask, setStage, toggleDone, deleteTask, addComment, addRevision } = useStore();
   const t = tasks.find((x) => x.id === id);
   const comments = useSub(['tasks', id, 'comments']);
   const [item, setItem] = useState('');
+  const ask = useAsk();
   if (!t) return <div className="screen no-nav"><button className="back" onClick={() => back()}><Icon name="left" size={20} />Geri</button><p className="small">İş bulunamadı ya da silindi.</p></div>;
 
   const firm = firms.find((f) => f.id === t.firmId);
@@ -89,7 +91,7 @@ export default function Is({ id }) {
             {stage === 3 && <button className="btn primary" onClick={() => setStage(t, 4)}>Müşteriye onaya gönderildi</button>}
             {stage === 4 && (
               <div className="grid2">
-                <button className="btn danger" onClick={() => { const n = prompt('Firmanın revize notu (isteğe bağlı):', ''); if (n !== null) addRevision(t, n.trim()); }}>Revize istendi</button>
+                <button className="btn danger" onClick={async () => { const n = await ask({ title: 'Firma revize istedi', message: 'Revize notunu yaz (isteğe bağlı). İş kurgu aşamasına döner.', input: true, placeholder: 'Örn. Döner kesim sahnesi daha uzun olsun', confirmText: 'Revizeyi kaydet' }); if (n !== null) addRevision(t, n); }}>Revize istendi</button>
                 <button className="btn primary" onClick={() => setStage(t, 5)}>Onaylandı</button>
               </div>
             )}
@@ -101,7 +103,7 @@ export default function Is({ id }) {
       <div className="row-h2"><h2 className="h2">Yorumlar</h2><span className="small">{comments.length ? comments.length + ' yorum' : ''}</span></div>
       <Thread items={comments} onSend={(text) => addComment(t, text)} placeholder="Yorum yaz…" emptyText="Henüz yorum yok." />
 
-      <button className="btn danger" style={{ width: '100%', marginTop: 28 }} onClick={() => { if (confirm('Bu iş silinsin mi? Geri alınamaz.')) { deleteTask(t.id); go('/'); } }}>
+      <button className="btn danger" style={{ width: '100%', marginTop: 28 }} onClick={async () => { if (await ask({ title: 'İş silinsin mi?', message: '“' + t.title + '” ve yorumları kalıcı olarak silinir.', confirmText: 'Sil', danger: true })) { deleteTask(t.id); go('/'); } }}>
         <Icon name="trash" size={18} />İşi sil
       </button>
     </div>

@@ -4,9 +4,11 @@ import { Nav, Logo, Icon, TaskRow, back, Switch, initials } from '../components/
 import { SECTORS, todayYmd, timeAgo } from '../data.js';
 import { packageProgress } from './Firmalar.jsx';
 import { GalleryGrid } from './Galeri.jsx';
+import { useAsk } from '../components/Dialog.jsx';
+import { deltaOf } from './Performans.jsx';
 
 function Info({ firm }) {
-  const { updateFirm, tasks } = useStore();
+  const { updateFirm, tasks, insta } = useStore();
   const [edit, setEdit] = useState(false);
   const [f, setF] = useState(null);
   const start = () => { setF({ ...firm, services: (firm.services || []).join(', '), package: { gonderi: 0, reels: 0, hikaye: 0, cekim: 0, ...(firm.package || {}) } }); setEdit(true); };
@@ -58,9 +60,18 @@ function Info({ firm }) {
     </div>
   );
 
+  const ig = insta[firm.id];
+  const d30 = deltaOf(ig, 30);
   return (
     <>
       {firm.active === false && <div className="pill neutral" style={{ marginTop: 20 }}>Sayfa aktif değil</div>}
+      {ig && ig.followers !== undefined && (
+        <a href="#/performans" className="card" style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, padding: 14, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">Takipçi</span><b style={{ fontSize: 18 }}>{ig.followers.toLocaleString('tr-TR')}</b></span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">30 gün</span><b style={{ fontSize: 18, color: d30 ? (d30.n >= 0 ? 'var(--moss)' : 'var(--alert-ink)') : 'var(--muted)' }}>{d30 ? (d30.n >= 0 ? '+' : '−') + Math.abs(d30.n).toLocaleString('tr-TR') : '—'}</b></span>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">Son izlenme</span><b style={{ fontSize: 18 }}>{ig.recent && ig.recent[0] && ig.recent[0].views != null ? ig.recent[0].views.toLocaleString('tr-TR') : '—'}</b></span>
+        </a>
+      )}
       {(firm.services || []).length > 0 && (
         <>
           <h2 className="h2">Verdiğimiz hizmetler</h2>
@@ -97,6 +108,7 @@ function Info({ firm }) {
 
 function Ideas({ firm }) {
   const { addIdea, toggleVote, deleteIdea, user } = useStore();
+  const ask = useAsk();
   const ideas = useSub(['firms', firm.id, 'ideas']);
   const [text, setText] = useState('');
   const sorted = ideas.slice().sort((a, b) => (b.votes || []).length - (a.votes || []).length);
@@ -115,7 +127,7 @@ function Ideas({ firm }) {
                 <span className="tiny">{i.byName}</span>
                 <span style={{ display: 'flex', gap: 14 }}>
                   <a className="link" href={'#/yeni?firma=' + firm.id + '&stage=0&title=' + encodeURIComponent(i.text)}>İşe çevir</a>
-                  {i.by === user.uid && <button className="link" style={{ color: 'var(--alert-ink)' }} onClick={() => { if (confirm('Fikir silinsin mi?')) deleteIdea(firm.id, i.id); }}>Sil</button>}
+                  {i.by === user.uid && <button className="link" style={{ color: 'var(--alert-ink)' }} onClick={async () => { if (await ask({ title: 'Fikir silinsin mi?', message: '“' + i.text + '”', confirmText: 'Sil', danger: true })) deleteIdea(firm.id, i.id); }}>Sil</button>}
                 </span>
               </div>
               <button aria-pressed={on} aria-label={'Oy ver, şu an ' + (i.votes || []).length + ' oy'} onClick={() => toggleVote(firm.id, i)}

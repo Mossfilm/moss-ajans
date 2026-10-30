@@ -32,26 +32,39 @@ export default function CekimPlani() {
   const rows = active.map((f) => ({ firm: f, ...stockOf(f, tasks, gallery) })).sort((a, b) => a.days - b.days);
   const shootsSoon = (id) => tasks.filter((t) => t.firmId === id && t.type === 'cekim' && !t.done && t.date >= t0 && t.date <= end);
 
-  const sugg = [];
-  let slot = 1;
-  rows.filter((r) => r.days <= 3 && shootsSoon(r.firm.id).length === 0).forEach((r) => {
-    const d = nextWeekday(today, slot); slot = slot >= 5 ? 1 : slot + 1;
-    sugg.push({ key: 'stok-' + r.firm.id, firm: r.firm, date: ymd(d), time: '11:00', title: 'İçerik çekimi (stok yenileme)', why: 'Elinde ' + r.days + ' günlük hazır içerik var ve önümüzdeki 7 günde çekim planlı değil.' });
-  });
-  upcomingSpecialDays(21).forEach((s) => {
-    const who = s.who || '';
-    active.forEach((f) => {
+  // Her firma için en fazla bir öneri: stok azsa ve bu hafta çekim yoksa; yaklaşan özel gün varsa nedenine eklenir.
+  const specials = upcomingSpecialDays(21).filter((s) => !/Anma/.test(s.name));
+  const cands = [];
+  rows.forEach((r) => {
+    if (shootsSoon(r.firm.id).length > 0) return;
+    const f = r.firm;
+    const sp = specials.find((s) => {
+      const who = s.who || '';
       const fits = who.includes('Tüm firmalar') || who.split(',').map((x) => x.trim()).includes(f.sector);
-      if (!fits) return;
-      const near = tasks.some((t) => t.firmId === f.id && t.date && Math.abs(parseYmd(t.date) - parseYmd(s.date)) <= 3 * 86400000)
+      const covered = tasks.some((t) => t.firmId === f.id && t.date && Math.abs(parseYmd(t.date) - parseYmd(s.date)) <= 3 * 86400000)
         || gallery.some((g) => g.firmId === f.id && g.date === s.date);
-      if (near) return;
-      const d = addDays(parseYmd(s.date), -7);
-      const when = d < today ? nextWeekday(today, 1) : d;
-      sugg.push({ key: 'ozel-' + f.id + '-' + s.date, firm: f, date: ymd(when), time: '14:00', title: s.name + ' içeriği çekimi', why: s.name + ' (' + parseYmd(s.date).getDate() + ' ' + MONTHS[parseYmd(s.date).getMonth()] + ') için henüz içerik yok.' });
+      return fits && !covered;
     });
+    if (r.days > 3 && !sp) return;
+    const reasons = [];
+    if (r.days <= 3) reasons.push('Elinde ' + r.days + ' günlük hazır içerik var.');
+    if (sp) reasons.push(sp.name + ' (' + parseYmd(sp.date).getDate() + ' ' + MONTHS[parseYmd(sp.date).getMonth()] + ') için henüz içerik yok; aynı çekimde onu da çek.');
+    cands.push({ key: 'oneri-' + f.id, firm: f, urgency: r.days - (sp ? 2 : 0), time: '11:00',
+      title: sp && r.days > 3 ? sp.name + ' içeriği çekimi' : 'İçerik çekimi' + (sp ? ' + ' + sp.name : ''), why: reasons.join(' ') });
   });
-  const visible = sugg.filter((s) => !hidden[s.key]).sort((a, b) => (a.date < b.date ? -1 : 1));
+  cands.sort((a, b) => a.urgency - b.urgency);
+  const perDay = {};
+  tasks.filter((t) => t.type === 'cekim' && !t.done && t.date >= t0 && t.date <= end).forEach((t) => { perDay[t.date] = (perDay[t.date] || 0) + 1; });
+  let dayIdx = 1;
+  const sugg = cands.slice(0, 6).map((c) => {
+    let d = nextWeekday(today, dayIdx);
+    while ((perDay[ymd(d)] || 0) >= 2) { dayIdx += 1; d = nextWeekday(today, dayIdx); }
+    perDay[ymd(d)] = (perDay[ymd(d)] || 0) + 1;
+    return { ...c, date: ymd(d), time: perDay[ymd(d)] === 1 ? '11:00' : '15:00' };
+  });
+  // Eklenenler, takvime girdikten sonra da listede “eklendi” olarak kalsın
+  const keep = Object.values(added).filter((s) => s && !sugg.some((x) => x.key === s.key));
+  const visible = sugg.concat(keep).filter((s) => !hidden[s.key]).sort((a, b) => (a.date + a.time < b.date + b.time ? -1 : 1));
   const byDay = [];
   visible.forEach((s) => { const g = byDay.find((x) => x.date === s.date); if (g) g.items.push(s); else byDay.push({ date: s.date, items: [s] }); });
   const planned = tasks.filter((t) => t.type === 'cekim' && !t.done && t.date >= t0 && t.date <= end).sort((a, b) => ((a.date + (a.time || '')) < (b.date + (b.time || '')) ? -1 : 1));
@@ -59,7 +72,7 @@ export default function CekimPlani() {
   const add = async (s) => {
     await addTask({ firmId: s.firm.id, title: s.title, type: 'cekim', date: s.date, time: s.time, note: s.why, assignees: [], approval: true, stage: 2, location: '', deliver: '',
       checklist: ['Kamera ve yedek bataryalar', 'Yaka mikrofonu', 'Işık seti', 'Çekim izinleri'].map((label, i) => ({ id: 'c' + i, label, done: false })) });
-    setAdded({ ...added, [s.key]: true });
+    setAdded((x) => ({ ...x, [s.key]: s }));
   };
   const label = (s) => { const d = parseYmd(s); return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + DAYS[d.getDay()]; };
 
@@ -68,7 +81,7 @@ export default function CekimPlani() {
       <button className="back" onClick={() => back('/')}><Icon name="left" size={20} />Geri</button>
       <span className="eyebrow" style={{ display: 'block', marginTop: 8 }}>{today.getDate()} {MONTHS[today.getMonth()]} – {addDays(today, 7).getDate()} {MONTHS[addDays(today, 7).getMonth()]}</span>
       <h1 className="h1" style={{ margin: '6px 0 8px' }}>Haftalık çekim planı</h1>
-      <p className="small" style={{ margin: 0, lineHeight: '19px' }}>Öneriler firmaların aylık paketine, hazır içerik stoğuna ve yaklaşan özel günlere göre hesaplanır.</p>
+      <p className="small" style={{ margin: 0, lineHeight: '19px' }}>Öneriler firmaların aylık paketine, hazır içerik stoğuna ve yaklaşan özel günlere göre hesaplanır. En acil 6 öneri, günde en fazla 2 çekim olacak şekilde dağıtılır.</p>
 
       <div className="row-h2"><h2 className="h2">İçerik stoğu</h2><span className="tiny">Kaç günlük paylaşım hazır</span></div>
       <div className="card pad stack" style={{ gap: 12 }}>

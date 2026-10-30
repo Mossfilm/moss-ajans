@@ -235,7 +235,7 @@ export function EditProje({ id }) {
             </span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
-              <span className="tiny">{f.kind === 'video' ? 'Video' : f.kind === 'image' ? 'Görsel' : 'Ses'}{f.duration ? ' · ' + f.duration + ' sn' : ''}{f.size ? ' · ' + (f.size / 1048576).toFixed(1) + ' MB' : ''}</span>
+              <span className="tiny">{f.kind === 'video' ? 'Video' : f.kind === 'image' ? 'Görsel' : 'Ses'}{f.duration ? ' · ' + f.duration + ' sn' : ''}{f.size ? ' · ' + (f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') : ''}</span>
             </span>
             <button aria-label={f.name + ' dosyasını projeden çıkar'} onClick={() => updateProject(p.id, { files: files.filter((x) => x.id !== f.id) })} style={{ width: 44, height: 44, border: 0, background: 'transparent' }}><Icon name="trash" size={18} color="#7C857E" /></button>
           </div>

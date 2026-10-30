@@ -27,15 +27,15 @@ export const SECTORS = ['Eğitim', 'Çocuk', 'Sanat', 'Otomotiv', 'Yeme-içme', 
 
 // İlk açılışta veritabanı boşsa yüklenen firmalar.
 export const SEED_FIRMS = [
-  { id: 'mutlu-cocuklar', name: 'Mutlu Çocuklar Akademisi', sector: 'Çocuk', logo: '/logos/mutlu-cocuklar.png', active: true },
-  { id: 'bogazici-vip', name: 'Boğaziçi VIP', sector: 'Eğitim', logo: '/logos/bogazici-vip.png', active: true, brand: 'Boğaziçi' },
-  { id: 'bogazici-pancarli', name: 'Boğaziçi Pancarlı', sector: 'Eğitim', logo: '/logos/bogazici-vip.png', active: true, brand: 'Boğaziçi' },
-  { id: 'bogazici-junior', name: 'Boğaziçi Junior', sector: 'Eğitim', logo: '/logos/bogazici-junior.png', active: true, brand: 'Boğaziçi' },
-  { id: 'net-vip-akademi', name: 'Net VIP Akademi', sector: 'Eğitim', logo: '/logos/net-vip-akademi.png', active: true },
-  { id: 'son-ders', name: 'Son Ders', sector: 'Eğitim', logo: '/logos/son-ders.png', active: true },
-  { id: 'ekici-sanat', name: 'Ekici Sanat', sector: 'Sanat', logo: '/logos/ekici-sanat.png', active: true },
-  { id: 'dsg-otomotiv', name: 'DSG Otomotiv', sector: 'Otomotiv', logo: '/logos/dsg-otomotiv.png', active: true },
-  { id: 'agustos-doner', name: 'Ağustos Döner', sector: 'Yeme-içme', logo: '/logos/agustos-doner.png', active: true },
+  { id: 'mutlu-cocuklar', name: 'Mutlu Çocuklar Akademisi', sector: 'Çocuk', logo: '/logos/mutlu-cocuklar.png', active: true, instagram: 'https://www.instagram.com/mutlu_cocuklarakademi/' },
+  { id: 'bogazici-vip', name: 'Boğaziçi VIP', sector: 'Eğitim', logo: '/logos/bogazici-vip.png', active: true, brand: 'Boğaziçi', instagram: 'https://www.instagram.com/gaziantepbogazicikoleji/' },
+  { id: 'bogazici-pancarli', name: 'Boğaziçi Pancarlı', sector: 'Eğitim', logo: '/logos/bogazici-vip.png', active: true, brand: 'Boğaziçi', instagram: 'https://www.instagram.com/pancarlibogazicivip/' },
+  { id: 'bogazici-junior', name: 'Boğaziçi Junior', sector: 'Eğitim', logo: '/logos/bogazici-junior.png', active: true, brand: 'Boğaziçi', instagram: 'https://www.instagram.com/bogazicijunior/' },
+  { id: 'net-vip-akademi', name: 'Net VIP Akademi', sector: 'Eğitim', logo: '/logos/net-vip-akademi.png', active: true, instagram: 'https://www.instagram.com/karatasnetvip/' },
+  { id: 'son-ders', name: 'Son Ders', sector: 'Eğitim', logo: '/logos/son-ders.png', active: true, instagram: 'https://www.instagram.com/sondersegitimkurumlari/' },
+  { id: 'ekici-sanat', name: 'Ekici Sanat', sector: 'Sanat', logo: '/logos/ekici-sanat.png', active: true, instagram: 'https://www.instagram.com/ekicisanat/' },
+  { id: 'dsg-otomotiv', name: 'DSG Otomotiv', sector: 'Otomotiv', logo: '/logos/dsg-otomotiv.png', active: true, instagram: 'https://www.instagram.com/dsgotomotivcom/' },
+  { id: 'agustos-doner', name: 'Ağustos Döner', sector: 'Yeme-içme', logo: '/logos/agustos-doner.png', active: true, instagram: 'https://www.instagram.com/agustosdoner/' },
   { id: 'kristal-kedi', name: 'Kristal Kedi', sector: 'Astroloji', logo: '/logos/kristal-kedi.png', active: false }
 ];
 

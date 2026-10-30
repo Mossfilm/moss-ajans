@@ -4,6 +4,8 @@ import { Nav, Icon, Logo, back } from '../components/ui.jsx';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase.js';
 import { timeAgo } from '../data.js';
+import { useAsk } from '../components/Dialog.jsx';
+import PushSettings from '../components/PushSettings.jsx';
 
 const KIND = {
   task: { label: 'Yeni iş', icon: 'plus', bg: '#E3EADB', fg: '#2F4A2C' },
@@ -18,6 +20,7 @@ const KIND = {
 export default function Bildirimler() {
   const { activity, user, firms, tasks, deleteSamples, profile } = useStore();
   const samples = tasks.filter((t) => t.sample).length;
+  const ask = useAsk();
   const key = 'moss-seen-' + user.uid;
   const [seen] = useState(() => Number(localStorage.getItem(key) || 0));
   useEffect(() => {
@@ -50,19 +53,15 @@ export default function Bildirimler() {
         })}
       </div>
 
-      <h2 className="h2" style={{ marginTop: 28 }}>Telefon bildirimleri</h2>
-      <div className="card pad small" style={{ lineHeight: '19px' }}>
-        “Yaptın mı?”, çekim sabahı, içerik stoğu ve özel gün hatırlatmaları bir sonraki güncellemede telefonuna düşmeye başlayacak.
-        Şimdilik ekipteki tüm hareketleri bu ekranda görüyorsun.
-      </div>
+      <PushSettings />
       <h2 className="h2" style={{ marginTop: 28 }}>Hesap</h2>
       <div className="card list">
         {samples > 0 && (
-          <button className="switch" onClick={() => { if (confirm(samples + ' örnek iş silinsin mi? Kendi eklediğiniz işler silinmez.')) deleteSamples(); }}>
+          <button className="switch" onClick={async () => { if (await ask({ title: 'Örnek işler silinsin mi?', message: samples + ' örnek iş silinecek. Ekibin eklediği işler silinmez.', confirmText: 'Sil', danger: true })) deleteSamples(); }}>
             <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600, color: 'var(--alert-ink)' }}>Örnek işleri sil ({samples})</span><span className="tiny">Uygulamayı tanımanız için eklenen örnek işler</span></span>
           </button>
         )}
-        <button className="switch" onClick={() => { if (confirm('Çıkış yapılsın mı?')) signOut(auth); }}>
+        <button className="switch" onClick={async () => { if (await ask({ title: 'Çıkış yapılsın mı?', confirmText: 'Çıkış yap' })) { window.location.hash = '/'; signOut(auth); } }}>
           <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontSize: 15, fontWeight: 600 }}>Çıkış yap</span><span className="tiny">{(profile && profile.name) || ''} · {user.email}</span></span>
           <Icon name="logout" size={20} />
         </button>

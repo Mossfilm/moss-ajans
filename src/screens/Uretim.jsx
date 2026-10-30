@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Fab, Logo, TypePill, Icon } from '../components/ui.jsx';
 import { STAGES, shortDate } from '../data.js';
+import { useAsk } from '../components/Dialog.jsx';
 
 const HINTS = [
   'Konuşulan fikirler. Uygun görülenler senaryo aşamasına geçer.',
@@ -15,6 +16,7 @@ const HINTS = [
 export default function Uretim() {
   const { tasks, firms, setStage, addRevision } = useStore();
   const [stage, setSt] = useState(4);
+  const ask = useAsk();
   const open = tasks.filter((t) => !t.done && typeof t.stage === 'number');
   const items = open.filter((t) => t.stage === stage).sort((a, b) => ((a.date || '9') < (b.date || '9') ? -1 : 1));
 
@@ -51,7 +53,7 @@ export default function Uretim() {
                 <div style={{ display: 'grid', gridTemplateColumns: stage === 4 ? '1fr 1fr' : '1fr', borderTop: '1px solid var(--line-2)' }}>
                   {stage === 4 && (
                     <button style={{ height: 44, border: 0, borderRight: '1px solid var(--line-2)', background: 'transparent', fontWeight: 600, fontSize: 14, color: 'var(--alert-ink)' }}
-                      onClick={() => { const n = prompt('Firmanın revize notu (isteğe bağlı):', ''); if (n !== null) addRevision(t, n.trim()); }}>
+                      onClick={async () => { const n = await ask({ title: 'Firma revize istedi', message: 'Revize notunu yaz (isteğe bağlı). İş kurgu aşamasına döner.', input: true, placeholder: 'Örn. Döner kesim sahnesi daha uzun olsun', confirmText: 'Revizeyi kaydet' }); if (n !== null) addRevision(t, n); }}>
                       Revize istendi
                     </button>
                   )}

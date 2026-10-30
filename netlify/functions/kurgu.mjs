@@ -68,7 +68,14 @@ export default async (req) => {
 
   const ids = new Set(files.map((f) => f.id));
   const plan = use.input;
-  plan.clips = (plan.clips || []).filter((c) => ids.has(c.fileId)).map((c) => ({ ...c, trim: Math.max(0, Number(c.trim) || 0), length: Math.min(30, Math.max(0.5, Number(c.length) || 3)) }));
+  const dur = Object.fromEntries(files.map((f) => [f.id, f.kind === 'video' ? f.duration : null]));
+  plan.clips = (plan.clips || []).filter((c) => ids.has(c.fileId) && files.find((f) => f.id === c.fileId).kind !== 'audio').map((c) => {
+    const max = dur[c.fileId];
+    let trim = Math.max(0, Number(c.trim) || 0);
+    let length = Math.min(30, Math.max(0.5, Number(c.length) || 3));
+    if (max) { trim = Math.min(trim, Math.max(0, max - 0.5)); length = Math.min(length, Math.max(0.5, max - trim)); }
+    return { ...c, trim: Math.round(trim * 10) / 10, length: Math.round(length * 10) / 10 };
+  });
   if (plan.musicFileId && !ids.has(plan.musicFileId)) plan.musicFileId = '';
   return Response.json({ plan });
 };
