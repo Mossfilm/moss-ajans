@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Hero, Clapper } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go, useRoute } from '../components/ui.jsx';
-import { PostPreview, VideoPlayer, downloadPost, startDrawing, FORMATS, TEMPLATES } from '../components/Post.jsx';
+import { PostPreview, VideoPlayer, downloadPost, FORMATS, TEMPLATES } from '../components/Post.jsx';
 import { shortDate } from '../data.js';
 import { useAsk } from '../components/Dialog.jsx';
 
@@ -93,7 +93,8 @@ export default function Galeri() {
 }
 
 export function GaleriItem({ id }) {
-  const { gallery, firms, updateGallery, deleteGallery } = useStore();
+  const { gallery, firms, updateGallery, deleteGallery, addJob } = useStore();
+  const [redo, setRedo] = useState(null);
   const g = gallery.find((x) => x.id === id);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -123,14 +124,20 @@ export function GaleriItem({ id }) {
           : <PostPreview spec={spec} firm={firm} width={Math.min(w, 520)} />)}
       </div>
 
-      {g.imageStatus === 'hazirlaniyor' && <p className="small" role="status" style={{ textAlign: 'center', marginTop: 10 }}>ChatGPT görseli çiziyor. Genelde 30–60 saniye sürer; bu sayfa kendiliğinden güncellenir.</p>}
-      {g.imageStatus === 'hata' && <p className="err" role="alert" style={{ marginTop: 10 }}>Görsel çizilemedi: {g.imageError || 'bilinmeyen hata'}</p>}
-      {spec.imagePrompt && g.imageStatus !== 'hazirlaniyor' && (
-        <button className="btn" style={{ width: '100%', marginTop: 10, color: 'var(--moss)' }}
-          onClick={async () => { await updateGallery(g.id, { imageStatus: 'hazirlaniyor', imageError: '' }); startDrawing(g.id, spec.imagePrompt, spec.format).catch(() => updateGallery(g.id, { imageStatus: 'hata', imageError: 'Bağlantı kurulamadı' })); }}>
-          <Icon name="sparkle" size={18} />ChatGPT ile yeniden çiz
+      {g.imageStatus === 'hazirlaniyor' && <p className="small" role="status" style={{ textAlign: 'center', marginTop: 10 }}>Claude’un sırasında: özel tasarım en geç yaklaşık 1 saat içinde burada olacak.</p>}
+      {g.imageStatus === 'hata' && <p className="err" role="alert" style={{ marginTop: 10 }}>Tasarım yapılamadı: {g.imageError || 'bilinmeyen hata'}</p>}
+      {g.kind !== 'video' && g.imageStatus !== 'hazirlaniyor' && (redo === null ? (
+        <button className="btn" style={{ width: '100%', marginTop: 10, color: 'var(--moss)' }} onClick={() => setRedo('')}>
+          <Icon name="sparkle" size={18} />Claude’a özel tasarım yaptır
         </button>
-      )}
+      ) : (
+        <form className="card pad stack" style={{ gap: 10, marginTop: 10 }} onSubmit={async (e) => { e.preventDefault(); await addJob({ kind: 'post', galleryId: g.id, firmId: g.firmId, text: redo.trim() || 'Bu postu şablon yerine özgün bir tasarımla yeniden yap.' }); await updateGallery(g.id, { imageStatus: 'hazirlaniyor', imageError: '' }); setRedo(null); }}>
+          <label className="label" htmlFor="redo">Nasıl bir tasarım olsun?</label>
+          <textarea id="redo" className="textarea" value={redo} onChange={(e) => setRedo(e.target.value)} placeholder="Örn. Daha sıcak renkler, büyük fotoğraf hissi, başlık ortada." />
+          <div className="grid2"><button type="button" className="btn" onClick={() => setRedo(null)}>Vazgeç</button><button className="btn primary" type="submit">Sıraya al</button></div>
+          <span className="tiny">En geç yaklaşık 1 saat içinde hazır olur.</span>
+        </form>
+      ))}
       {g.kind !== 'video' && (
         <button className="btn primary" style={{ width: '100%', marginTop: 14 }} disabled={busy}
           onClick={async () => { setBusy(true); try { await downloadPost(spec, firm, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { setDlErr('İndirilemedi: ' + e.message); } setBusy(false); }}>

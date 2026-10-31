@@ -41,6 +41,8 @@ export function StoreProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const [insta, setInsta] = useState({});
   const [pushSub, setPushSub] = useState(null);
+  const [chat, setChat] = useState([]);
+  const [jobs, setJobs] = useState([]);
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u || null)), []);
 
@@ -90,6 +92,12 @@ export function StoreProvider({ children }) {
     }));
     unsubs.push(onSnapshot(collection(db, 'insta'), (snap) => {
       const m = {}; snap.docs.forEach((d) => { m[d.id] = d.data(); }); setInsta(m);
+    }));
+    unsubs.push(onSnapshot(query(collection(db, 'chat'), orderBy('at', 'desc'), limit(80)), (snap) => {
+      setChat(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).reverse());
+    }));
+    unsubs.push(onSnapshot(collection(db, 'jobs'), (snap) => {
+      setJobs(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
     }));
     unsubs.push(onSnapshot(doc(db, 'pushSubs', user.uid), (snap) => setPushSub(snap.exists() ? snap.data() : null)));
     // İlk kurulumda bir kez: örnek işler (galeri boş başlar; içerik istendiğinde üretilir)
@@ -169,7 +177,7 @@ export function StoreProvider({ children }) {
       deleteGallery: (id) => deleteDoc(doc(db, 'gallery', id)),
       addProject: async (p) => {
         const ref = await addDoc(collection(db, 'projects'), {
-          files: [], brief: '', plan: null, renderStatus: '', outputUrl: '', version: 1, rootId: '', parentId: '', revisionLabel: '', revisionNote: '',
+          files: [], sources: [], brief: '', opts: { length: 30, captions: true, music: '' }, plan: null, status: '', video: null, renderStatus: '', outputUrl: '', version: 1, rootId: '', parentId: '', revisionLabel: '', revisionNote: '',
           ...p, by: user.uid, byName: me().name, at: serverTimestamp()
         });
         if (!p.rootId) await updateDoc(ref, { rootId: ref.id });
@@ -185,12 +193,29 @@ export function StoreProvider({ children }) {
         const base = prev.baseName || root.baseName || root.name;
         const name = base + ' (' + (tag ? tag + ' ' : '') + 'Vol ' + version + ')';
         const ref = await addDoc(collection(db, 'projects'), {
-          name, baseName: base, firmId: prev.firmId, files: prev.files || [], brief: prev.brief || '', plan: prev.plan || null,
-          renderStatus: '', outputUrl: '', version, rootId: root.id, parentId: prev.id, revisionLabel: tag, revisionNote: note || '',
+          name, baseName: base, firmId: prev.firmId, files: prev.files || [], sources: prev.sources || [], opts: prev.opts || { length: 30, captions: true, music: '' }, brief: prev.brief || '', plan: prev.plan || null,
+          status: '', video: null, renderStatus: '', outputUrl: '', version, rootId: root.id, parentId: prev.id, revisionLabel: tag, revisionNote: note || '',
           by: user.uid, byName: me().name, at: serverTimestamp()
         });
         log('edit', 'Revize açıldı: ' + name, { firmId: prev.firmId, projectId: ref.id });
         return ref.id;
+      },
+      addChat: (m) => addDoc(collection(db, 'chat'), { by: user.uid, byName: me().name, ...m, at: serverTimestamp() }),
+      clearChat: async () => {
+        const snap = await getDocs(collection(db, 'chat'));
+        const b = writeBatch(db);
+        snap.docs.forEach((d) => b.delete(d.ref));
+        await b.commit();
+      },
+      addJob: async (j) => {
+        const ref = await addDoc(collection(db, 'jobs'), { status: 'bekliyor', firmId: '', text: '', ...j, by: user.uid, byName: me().name, at: serverTimestamp() });
+        return ref.id;
+      },
+      cancelJob: (id) => deleteDoc(doc(db, 'jobs', id)),
+      queueProject: async (p, patch = {}) => {
+        await updateDoc(doc(db, 'projects', p.id), { ...patch, status: 'sirada', workerNote: '', queuedAt: serverTimestamp() });
+        await addDoc(collection(db, 'jobs'), { kind: 'video', status: 'bekliyor', projectId: p.id, firmId: p.firmId, text: (patch.brief ?? p.brief) || '', by: user.uid, byName: me().name, at: serverTimestamp() });
+        log('edit', 'Montaj sıraya alındı: ' + p.name, { firmId: p.firmId, projectId: p.id });
       },
       savePush: (data) => setDoc(doc(db, 'pushSubs', user.uid), { email: user.email, name: me().name, ...data }, { merge: true }),
       removePush: () => deleteDoc(doc(db, 'pushSubs', user.uid)),
@@ -204,7 +229,7 @@ export function StoreProvider({ children }) {
     };
   }, [user, profile, firms]);
 
-  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, insta, pushSub, ready, ...api };
+  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, insta, pushSub, chat, jobs, ready, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

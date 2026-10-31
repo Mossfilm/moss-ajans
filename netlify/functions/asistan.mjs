@@ -1,64 +1,60 @@
-// Moss Asistan: uygulamadaki sohbet ekranının arka ucu.
-// Gerekli ortam değişkenleri (Netlify → Site configuration → Environment variables):
-//   ANTHROPIC_API_KEY  : Anthropic API anahtarı
-//   FIREBASE_API_KEY   : src/firebase-config.js içindeki apiKey (giriş doğrulaması için)
-//   ALLOWED_EMAILS     : virgülle ayrılmış ekip e-postaları
-// İsteğe bağlı: CLAUDE_MODEL (varsayılan claude-sonnet-5-5)
-// Görseller: OPENAI_API_KEY tanımlıysa post görselleri ChatGPT'nin görsel modeline çizdirilir (gorsel-background).
+// Moss Asistan (ücretsiz): anlık cevaplar Google Gemini'nin ücretsiz katmanından gelir.
+// Montaj ve özel tasarım gibi ağır işler "jobs" sırasına alınır; Claude saatte bir uyanıp yapar.
+// Ortam değişkenleri (Netlify → Site configuration → Environment variables):
+//   GEMINI_API_KEY   : Google AI Studio'dan alınan ücretsiz anahtar (kart gerekmez)
+//   FIREBASE_API_KEY : src/firebase-config.js içindeki apiKey (giriş doğrulaması için)
+//   ALLOWED_EMAILS   : virgülle ayrılmış ekip e-postaları
+// İsteğe bağlı: GEMINI_MODEL (varsayılan gemini-flash-latest)
 import { verify } from './lib/auth.mjs';
 
-const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
+const S = (description, extra = {}) => ({ type: 'string', description, ...extra });
 const TOOLS = [
   {
     name: 'create_post',
-    description: 'Bir firma için Instagram gönderisi tasarlar ve firmanın galerisine taslak olarak ekler. Tasarım, verilen şablon ve metinlerle uygulama içinde çizilir.',
-    input_schema: {
+    description: 'Bir firma için Instagram gönderisi hazırlar ve firmanın galerisine taslak olarak ekler. Tasarım uygulamadaki hazır şablonla, firmanın renkleri ve logosuyla çizilir.',
+    parameters: {
       type: 'object',
       properties: {
-        firmId: { type: 'string', description: 'Firma kimliği (bağlamdaki firms listesinden id)' },
-        title: { type: 'string', description: 'Galeride görünecek kısa başlık' },
-        template: { type: 'string', enum: ['gorsel', 'anma', 'kutlama', 'duyuru', 'urun', 'alinti'], description: 'gorsel: ChatGPT ile çizilen tam tasarım (görsel modeli bağlıysa her zaman bunu kullan); anma: siyah-beyaz anma günleri; kutlama: bayram ve özel günler; duyuru: kampanya, kayıt, sınav sonucu; urun: yemek/ürün; alinti: söz veya müşteri yorumu' },
-        format: { type: 'string', enum: ['kare', 'dikey', 'hikaye'] },
-        eyebrow: { type: 'string', description: 'Üstteki kısa etiket, en fazla 4 kelime' },
-        headline: { type: 'string', description: 'Ana başlık, en fazla 8 kelime. Satır kırmak için \\n kullan.' },
-        sub: { type: 'string', description: 'Alt metin, en fazla 18 kelime' },
-        foot: { type: 'string', description: 'Alt bilgi: firma adı, şube ya da çağrı' },
-        caption: { type: 'string', description: 'Instagram paylaşım metni' },
-        tags: { type: 'string', description: 'Hashtagler, boşlukla ayrılmış' },
-        image_prompt: { type: 'string', description: 'ChatGPT görsel modeline gidecek, İNGİLİZCE yazılmış ayrıntılı tasarım tarifi: kompozisyon, stil, ışık, renkler (firmanın marka renkleri hex olarak), tipografi. Görselin üzerinde yazacak Türkçe metni tırnak içinde, Türkçe karakterleriyle aynen ver. Logo çizdirme; köşede logo için boş alan bırak (logo uygulama tarafından eklenir). Gerçek kişi yüzü, marka logosu ya da telifli karakter isteme.' },
-        date: { type: 'string', description: 'Önerilen paylaşım tarihi YYYY-MM-DD' },
-        time: { type: 'string', description: 'Önerilen saat HH:MM' }
+        firmId: S('Firma kimliği (firms listesindeki id)'),
+        title: S('Galeride görünecek kısa başlık'),
+        template: S('anma: siyah-beyaz anma günleri; kutlama: bayram ve özel günler; duyuru: kampanya, kayıt, sınav sonucu; urun: yemek/ürün; alinti: söz veya müşteri yorumu', { enum: ['anma', 'kutlama', 'duyuru', 'urun', 'alinti'] }),
+        format: S('kare, dikey ya da hikaye', { enum: ['kare', 'dikey', 'hikaye'] }),
+        eyebrow: S('Üstteki kısa etiket, en fazla 4 kelime'),
+        headline: S('Ana başlık, en fazla 8 kelime. Satır kırmak için \\n kullan.'),
+        sub: S('Alt metin, en fazla 18 kelime'),
+        foot: S('Alt bilgi: firma adı, şube ya da çağrı'),
+        caption: S('Instagram paylaşım metni'),
+        tags: S('Hashtagler, boşlukla ayrılmış'),
+        date: S('Önerilen paylaşım tarihi YYYY-MM-DD'),
+        time: S('Önerilen saat HH:MM')
       },
       required: ['firmId', 'title', 'template', 'format', 'headline', 'caption']
     }
   },
   {
     name: 'create_video',
-    description: 'Bir firma için dikey reels videosu senaryosu ve animasyonlu önizlemesi hazırlar, galeriye ekler.',
-    input_schema: {
+    description: 'Bir firma için dikey reels senaryosu ve animasyonlu önizlemesi hazırlar, galeriye ekler. (Gerçek video montajı değil; montaj için queue_for_claude kullan.)',
+    parameters: {
       type: 'object',
       properties: {
-        firmId: { type: 'string' },
-        title: { type: 'string' },
+        firmId: S('Firma kimliği'),
+        title: S('Başlık'),
         scenes: {
-          type: 'array', minItems: 2, maxItems: 7,
+          type: 'array',
+          description: '2-7 sahne',
           items: {
             type: 'object',
-            properties: {
-              sec: { type: 'number', description: 'Sahne süresi (saniye)' },
-              shot: { type: 'string', description: 'Çekilecek görüntü' },
-              text: { type: 'string', description: 'Ekranda yazacak kısa metin' },
-              vo: { type: 'string', description: 'Seslendirme metni (yoksa boş)' }
-            },
+            properties: { sec: { type: 'number', description: 'Sahne süresi (saniye)' }, shot: S('Çekilecek görüntü'), text: S('Ekranda yazacak kısa metin'), vo: S('Seslendirme metni (yoksa boş)') },
             required: ['sec', 'shot', 'text']
           }
         },
-        music: { type: 'string' },
-        caption: { type: 'string' },
-        tags: { type: 'string' },
-        date: { type: 'string' },
-        time: { type: 'string' }
+        music: S('Müzik önerisi'),
+        caption: S('Paylaşım metni'),
+        tags: S('Hashtagler'),
+        date: S('YYYY-MM-DD'),
+        time: S('HH:MM')
       },
       required: ['firmId', 'title', 'scenes', 'caption']
     }
@@ -66,17 +62,30 @@ const TOOLS = [
   {
     name: 'create_task',
     description: 'Takvime ve üretim hattına yeni bir iş ekler (çekim, paylaşım, toplantı vb.).',
-    input_schema: {
+    parameters: {
       type: 'object',
       properties: {
-        firmId: { type: 'string' },
-        title: { type: 'string' },
-        type: { type: 'string', enum: ['cekim', 'gonderi', 'reels', 'hikaye', 'kurgu', 'tasarim', 'reklam', 'toplanti', 'rapor', 'diger'] },
-        date: { type: 'string' },
-        time: { type: 'string' },
-        note: { type: 'string' }
+        firmId: S('Firma kimliği'),
+        title: S('İş başlığı'),
+        type: S('İş türü', { enum: ['cekim', 'gonderi', 'reels', 'hikaye', 'kurgu', 'tasarim', 'reklam', 'toplanti', 'rapor', 'diger'] }),
+        date: S('YYYY-MM-DD'),
+        time: S('HH:MM'),
+        note: S('Not')
       },
       required: ['firmId', 'title', 'type', 'date']
+    }
+  },
+  {
+    name: 'queue_for_claude',
+    description: 'Senin yapamayacağın ağır işleri Claude\'un saatlik sırasına ekler: ham videolardan montaj, özel/özgün post tasarımı, uzun analiz. Claude en geç yaklaşık 1 saat içinde yapıp sonucu uygulamaya koyar.',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind: S('post: özel tasarım; video: montaj; diger: analiz ya da başka iş', { enum: ['post', 'video', 'diger'] }),
+        firmId: S('Firma kimliği (varsa)'),
+        brief: S('Claude\'a gidecek ayrıntılı, Türkçe iş tarifi')
+      },
+      required: ['kind', 'brief']
     }
   }
 ];
@@ -84,19 +93,15 @@ const TOOLS = [
 function system(ctx) {
   return [
     'Sen Moss Film Agency’nin (Gaziantep’te bir medya ajansı) ekip uygulamasındaki asistansın. Ekip 3–5 kişi; Türkçe, samimi ve kısa konuş.',
-    'Görevin: firmalar için içerik fikri üretmek, fikirleri ekiple tartışmak, istenince post ve video hazırlayıp galeriye eklemek, takvime iş eklemek.',
+    'Görevin: firmalar için içerik fikri üretmek, fikirleri ekiple tartışmak, istenince post (create_post) ve reels senaryosu (create_video) hazırlayıp galeriye eklemek, takvime iş eklemek (create_task).',
+    'Ham videolardan montaj, altyazı, müzikli kurgu ya da şablon dışı özel tasarım istenirse queue_for_claude ile Claude\'un sırasına ekle ve kullanıcıya "en geç yaklaşık 1 saat içinde hazır olur" de. Montaj için kullanıcıyı Edit sekmesine de yönlendirebilirsin.',
     'Kurallar:',
-    '- Post ve video istendiğinde create_post / create_video araçlarını kullan; birden fazla firma istenirse her firma için ayrı çağır.',
-    ctx.imagesEnabled
-      ? '- Görselleri ChatGPT (OpenAI görsel modeli) çiziyor: her create_post için mutlaka image_prompt yaz ve template olarak "gorsel" kullan. Her firmanın tasarımı kendi sektörüne ve marka renklerine özgü olsun; aynı tasarımı firmalar arasında kopyalama.'
-      : '- Görsel modeli bağlı değil: create_post için hazır şablonlardan (anma, kutlama, duyuru, urun, alinti) uygun olanı seç; image_prompt yazma.',
-    '- Yalnızca kullanıcının istediği içeriği üret; istenmeyen ek post ya da video hazırlama.',
-    '- Bilmediğin bilgileri uydurma: fiyat, adres, telefon, sınav sonucu, öğretmen adı gibi bilgiler için [FİYAT], [ADRES] gibi yer tutucu bırak.',
-    '- Anma günlerinde (10 Kasım gibi) anma şablonunu ve ağırbaşlı bir dil kullan; kutlama dili kullanma.',
-    '- Gerçek kişilerin fotoğrafını ya da sözünü kullanma; Atatürk’e ait söz eklemek istersen yalnızca çok bilinen ve doğruluğundan emin olduğun bir söz kullan, emin değilsen ekleme.',
-    '- Başlıklar kısa ve çarpıcı olsun; metin dili firmanın sektörüne uygun olsun.',
+    '- Birden fazla firma istenirse her firma için ayrı çağır. Yalnızca istenen içeriği üret.',
+    '- Bilmediğin bilgileri uydurma: fiyat, adres, telefon, sınav sonucu gibi bilgiler için [FİYAT], [ADRES] gibi yer tutucu bırak.',
+    '- Anma günlerinde (10 Kasım gibi) anma şablonunu ve ağırbaşlı bir dil kullan.',
+    '- Gerçek kişilere söz atfetme; emin olmadığın alıntıyı ekleme.',
     '- Aktif olmayan firmalar (active=false) için içerik üretme, nedenini söyle.',
-    '- Bir işlem yaptıysan cevabında kısaca ne yaptığını söyle.',
+    '- Her cevapta kısa bir metin yaz; bir işlem yaptıysan ne yaptığını söyle.',
     '',
     'Bugünün tarihi: ' + (ctx.today || ''),
     ctx.focusFirm ? 'Şu an konuşulan firma: ' + ctx.focusFirm : '',
@@ -107,49 +112,50 @@ function system(ctx) {
   ].filter(Boolean).join('\n');
 }
 
-async function claude(body) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify(body)
+async function gemini(body) {
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY), {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error((j.error && j.error.message) || 'API hatası');
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 429) { const e = new Error('quota'); e.quota = true; throw e; }
+  if (!r.ok) throw new Error((j.error && j.error.message) || 'Gemini hatası ' + r.status);
   return j;
 }
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  if (!process.env.ANTHROPIC_API_KEY) return Response.json({ error: 'not_configured' }, { status: 503 });
-  const auth = (req.headers.get('authorization') || '').replace(/^Bearer /, '');
-  const email = await verify(auth);
+  if (!process.env.GEMINI_API_KEY) return Response.json({ error: 'not_configured' }, { status: 503 });
+  const email = await verify((req.headers.get('authorization') || '').replace(/^Bearer /, ''));
   if (!email) return Response.json({ error: 'unauthorized' }, { status: 401 });
 
   let input;
   try { input = await req.json(); } catch (e) { return Response.json({ error: 'bad_request' }, { status: 400 }); }
-  const messages = (input.messages || []).slice(-20).map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.text || '') })).filter((m) => m.content);
-  if (!messages.length) return Response.json({ error: 'bad_request' }, { status: 400 });
+  let contents = (input.messages || []).slice(-20)
+    .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(m.text || '') }] }))
+    .filter((m) => m.parts[0].text);
+  while (contents.length && contents[0].role !== 'user') contents.shift();
+  if (!contents.length) return Response.json({ error: 'bad_request' }, { status: 400 });
 
-  const ctx = { ...(input.context || {}), imagesEnabled: Boolean(process.env.OPENAI_API_KEY) };
-  const sys = system(ctx);
+  const base = { system_instruction: { parts: [{ text: system(input.context || {}) }] }, tools: [{ functionDeclarations: TOOLS }], generationConfig: { temperature: 0.7 } };
   const actions = [];
-  let convo = messages;
   let reply = '';
   try {
     for (let round = 0; round < 3; round++) {
-      const res = await claude({ model: MODEL, max_tokens: 4096, system: sys, tools: TOOLS, messages: convo });
-      const texts = res.content.filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
-      const uses = res.content.filter((c) => c.type === 'tool_use');
-      if (texts) reply = texts;
-      if (res.stop_reason !== 'tool_use' || !uses.length) break;
-      uses.forEach((u) => actions.push({ ...u.input, action: u.name }));
-      convo = convo.concat(
-        { role: 'assistant', content: res.content },
-        { role: 'user', content: uses.map((u) => ({ type: 'tool_result', tool_use_id: u.id, content: 'Tamamlandı, uygulamaya eklendi.' })) }
+      const res = await gemini({ ...base, contents });
+      const parts = (((res.candidates || [])[0] || {}).content || {}).parts || [];
+      const text = parts.filter((p) => p.text).map((p) => p.text).join('\n').trim();
+      const calls = parts.filter((p) => p.functionCall).map((p) => p.functionCall);
+      if (text) reply = text;
+      if (!calls.length) break;
+      calls.forEach((c) => actions.push({ ...(c.args || {}), action: c.name }));
+      contents = contents.concat(
+        { role: 'model', parts: calls.map((c) => ({ functionCall: c })) },
+        { role: 'user', parts: calls.map((c) => ({ functionResponse: { name: c.name, response: { result: c.name === 'queue_for_claude' ? 'Claude sırasına eklendi, en geç ~1 saat' : 'Tamamlandı, uygulamaya eklendi' } } })) }
       );
     }
   } catch (e) {
+    if (e.quota) return Response.json({ error: 'quota' }, { status: 429 });
     return Response.json({ error: 'api', message: e.message }, { status: 502 });
   }
-  return Response.json({ reply: reply || 'Tamam.', actions, imagesEnabled: ctx.imagesEnabled });
+  return Response.json({ reply: reply || 'Tamam.', actions, via: 'gemini' });
 };

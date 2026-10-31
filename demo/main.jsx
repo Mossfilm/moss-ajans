@@ -2,6 +2,8 @@ import { installFakeFunctions } from '../test/fake/functions.js';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 installFakeFunctions({});
+// Önizlemede Claude'un saatlik işi birkaç saniyede taklit edilir
+setInterval(() => { if (window.__fakeWorkerRun) window.__fakeWorkerRun().catch(() => {}); }, 6000);
 try { localStorage.setItem('moss-pending-name', 'Moss'); } catch (e) { /* önizleme */ }
 const day = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 const hist = (base, step) => Array.from({ length: 30 }, (_, i) => ({ d: day(29 - i), f: Math.round(base + i * step + Math.sin(i) * step * 2) }));

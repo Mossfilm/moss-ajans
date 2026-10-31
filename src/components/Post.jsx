@@ -56,7 +56,7 @@ export function PostArt({ spec, firm }) {
           ? <img src={spec.imageUrl} alt="" crossOrigin="anonymous" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           : (
             <div style={{ position: 'absolute', inset: 0, padding: pad, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 36 }}>
-              <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: 6, textTransform: 'uppercase', color: b.accent }}>{spec.imageStatus === 'hata' ? 'Görsel çizilemedi' : 'ChatGPT görseli çiziyor…'}</span>
+              <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: 6, textTransform: 'uppercase', color: b.accent }}>{spec.imageStatus === 'hata' ? 'Tasarım yapılamadı' : 'Claude tasarlıyor…'}</span>
               <span style={{ fontFamily: DISPLAY, fontSize: 104, lineHeight: 1.04, fontWeight: 800, whiteSpace: 'pre-line' }}>{spec.headline}</span>
             </div>
           )}
@@ -147,15 +147,6 @@ export function PostArt({ spec, firm }) {
 }
 
 // ChatGPT görsel çizimini başlat (arka planda çalışır; sonuç galeri kaydına yazılır)
-export async function startDrawing(galleryId, prompt, format) {
-  const { auth } = await import('../firebase.js');
-  const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : '';
-  const r = await fetch('/.netlify/functions/gorsel-background', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ galleryId, prompt, format, idToken })
-  });
-  return r.ok || r.status === 202;
-}
 
 // Ölçeklenmiş önizleme
 export function PostPreview({ spec, firm, width = 320, radius = 14 }) {

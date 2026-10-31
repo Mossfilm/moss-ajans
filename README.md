@@ -27,32 +27,22 @@ npm run build
 ```
 
 
-## Claude + ChatGPT
-- **Claude** (`netlify/functions/asistan.mjs`): sohbet, fikir, metin, senaryo; uygulamada iş ve galeri kaydı oluşturur.
-- **ChatGPT görselleri** (`netlify/functions/gorsel-background.mjs`): Claude'un yazdığı tasarım tarifini OpenAI görsel modeline (varsayılan `gpt-image-2`, orta kalite) çizdirir, görseli Netlify Blobs'a kaydeder ve galeri kaydına bağlar. Firma logosu görselin köşesine uygulama tarafından eklenir.
+## Asistan ve Edit (ücretsiz düzen)
+Hiçbir ücretli API kullanılmaz.
 
-### Netlify ortam değişkenleri
-| Ad | Değer |
+- **Anlık asistan:** `netlify/functions/asistan.mjs` Google Gemini'nin ücretsiz katmanını kullanır. Sohbet, fikir, şablonlu post, reels senaryosu ve takvim işi anında yapılır. Anahtar yoksa ya da günlük kota dolduysa soru otomatik olarak Claude'un sırasına (`jobs`) düşer.
+- **Claude'un saatlik işi:** Zamanlanmış görev her saat `public/worker/moss.mjs` ile `jobs` sırasını okur; `public/worker/TALIMAT.md` talimatına göre cevap yazar, özel post tasarlar, Drive linklerinden video indirip ffmpeg ile reels montajlar (altyazı: faster-whisper, müzik: ekibin verdiği link) ve sonucu uygulamaya koyar.
+- **Video depolama:** Bitmiş reels Firestore'da (`videoParcalar`) ~700 KB'lık parçalar halinde durur; uygulama birleştirip oynatır ve indirir. Firebase Storage (kart isteyen Blaze planı) gerekmez. Ham videolar ekibin kendi Google Drive'ında kalır.
+- **Sohbet:** `chat` koleksiyonu tüm ekipte ortaktır; `via` alanı cevabın kaynağını gösterir (gemini / claude / sistem).
+
+| Netlify ortam değişkeni | Değer |
 |---|---|
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
-| `OPENAI_API_KEY` | platform.openai.com → API keys |
+| `GEMINI_API_KEY` | aistudio.google.com → Get API key (ücretsiz, kart gerekmez) |
+| `GEMINI_MODEL` (isteğe bağlı) | Varsayılan `gemini-flash-latest` |
 | `FIREBASE_API_KEY` | `src/firebase-config.js` içindeki apiKey |
 | `ALLOWED_EMAILS` | `hello@mossfilmagency.com,ebru27@gmail.com,bertan27@gmail.com` |
-| `OPENAI_IMAGE_QUALITY` (isteğe bağlı) | `low`, `medium` (varsayılan) ya da `high` |
 
-Fonksiyonlar sürükle-bırak yüklemede çalışmaz; site GitHub bağlantısı ya da Netlify CLI ile yüklenmelidir.
-
-## Edit (video kurgu)
-- Alt menüde **Edit**: montaj projeleri + kütüphane (galeri).
-- Ham dosyalar Firebase Storage'a yüklenir (`storage.rules` kurallarıyla; Storage için Firebase Blaze planı gerekir).
-- `netlify/functions/kurgu.mjs`: Claude, montaj tarifinden zaman çizelgesi (kurgu planı) çıkarır.
-- `netlify/functions/render-background.mjs`: planı Shotstack'e gönderir, MP4 adresini projeye yazar.
-- Revize: yeni versiyon belgesi açılır, ad biçimi `Proje Adı (Etiket Vol N)`; önceki plan ve revize notu Claude'a verilir.
-
-| Ad | Değer |
-|---|---|
-| `SHOTSTACK_API_KEY` | shotstack.io panelindeki API anahtarı |
-| `SHOTSTACK_BASE` (isteğe bağlı) | Varsayılan `https://api.shotstack.io/stage` (filigranlı deneme); canlı için paneldeki üretim adresi |
+Claude'un zamanlanmış görev ortamında gerekenler: `FIREBASE_SERVICE_ACCOUNT` gizli değişkeni ve ağ izni (`googleapis.com`, `drive.google.com`, `drive.usercontent.google.com`, `huggingface.co`, sitenin `netlify.app` adresi).
 
 ## Telefon bildirimleri ve Instagram sayaçları
 - `netlify/functions/hatirlatma.mjs` (saatlik): sabah özeti, çekim sabahı, “Yaptın mı?”, yarınki işler, özel günler, haftalık çekim planı. 22:00–08:00 sessiz.

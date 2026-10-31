@@ -1,43 +1,50 @@
-import { useState } from 'react';
-import { Hero, Camera, Clapper } from '../components/Art.jsx';
+import { useEffect, useState } from 'react';
+import { Hero, Camera } from '../components/Art.jsx';
 import { brandOf } from '../components/Post.jsx';
-import { ref as sref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useStore } from '../store.jsx';
-import { Nav, Icon, Logo, back, go } from '../components/ui.jsx';
+import { Nav, Icon, Logo, back, go, Switch } from '../components/ui.jsx';
 import { GalleryGrid } from './Galeri.jsx';
-import { storage, auth } from '../firebase.js';
+import { db } from '../firebase.js';
 import { timeAgo } from '../data.js';
 
-const STATUS = {
-  '': { label: 'Taslak', cls: 'pill neutral' },
-  plan: { label: 'Montaj planı hazır', cls: 'pill ok' },
-  kuyruk: { label: 'Render sırada', cls: 'pill neutral' },
-  render: { label: 'Render alınıyor', cls: 'pill neutral' },
-  hazir: { label: 'Ham ürün hazır', cls: 'pill ok' },
-  hata: { label: 'Hata', cls: 'pill alert' }
+// Montaj durumu: taslak → sırada (Claude'u bekliyor) → işleniyor → hazır / hata
+export const STATUS = {
+  '': { label: 'Taslak', cls: 'pill neutral', icon: 'edit' },
+  sirada: { label: 'Claude sırasında', cls: 'pill wait', icon: 'clock' },
+  isleniyor: { label: 'Montajlanıyor', cls: 'pill wait', icon: 'film' },
+  hazir: { label: 'Reels hazır', cls: 'pill ok', icon: 'check' },
+  hata: { label: 'Yapılamadı', cls: 'pill alert', icon: 'shield' }
 };
-const statusOf = (p) => STATUS[p.renderStatus || (p.plan ? 'plan' : '')] || STATUS[''];
+export const statusOf = (p) => STATUS[p.status || (p.outputUrl ? 'hazir' : '')] || STATUS[''];
 
-function kindOf(file) {
-  const t = file.type || '';
-  if (t.startsWith('video/')) return 'video';
-  if (t.startsWith('image/')) return 'image';
-  if (t.startsWith('audio/')) return 'audio';
-  return 'other';
-}
-function mediaDuration(file, kind) {
-  if (kind !== 'video' && kind !== 'audio') return Promise.resolve(null);
-  return new Promise((res) => {
-    const el = document.createElement(kind);
-    el.preload = 'metadata';
-    el.onloadedmetadata = () => { const d = el.duration; URL.revokeObjectURL(el.src); res(Number.isFinite(d) ? Math.round(d * 10) / 10 : null); };
-    el.onerror = () => res(null);
-    el.src = URL.createObjectURL(file);
-  });
-}
-async function callFn(name, body) {
-  const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
-  return fetch('/.netlify/functions/' + name, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ ...body, idToken: token }) });
+const isLink = (u) => /^https?:\/\/\S+$/i.test((u || '').trim());
+const linkLabel = (u) => {
+  if (/drive\.google\.com|docs\.google\.com/.test(u)) return 'Google Drive';
+  if (/wetransfer|we\.tl/.test(u)) return 'WeTransfer';
+  if (/dropbox/.test(u)) return 'Dropbox';
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'Bağlantı'; }
+};
+
+// Claude'un bitirdiği video, ücretsiz veritabanında ~900 KB'lık parçalar halinde durur; burada birleştirilip oynatılır.
+function useVideo(p) {
+  const [url, setUrl] = useState('');
+  const [state, setState] = useState('');
+  const key = p && p.video ? p.id + ':' + (p.video.parts || 0) + ':' + (p.video.at || '') : '';
+  useEffect(() => {
+    if (!key) { setUrl(''); return undefined; }
+    let alive = true; let made = '';
+    setState('yukleniyor');
+    getDocs(query(collection(db, 'videoParcalar'), where('projectId', '==', p.id))).then((snap) => {
+      const parts = snap.docs.map((d) => d.data()).sort((a, b) => a.i - b.i);
+      if (!parts.length) { if (alive) setState('yok'); return; }
+      const bytes = parts.map((x) => Uint8Array.from(atob(x.d), (c) => c.charCodeAt(0)));
+      made = URL.createObjectURL(new Blob(bytes, { type: p.video.mime || 'video/mp4' }));
+      if (alive) { setUrl(made); setState(''); }
+    }).catch(() => alive && setState('hata'));
+    return () => { alive = false; if (made) URL.revokeObjectURL(made); };
+  }, [key]);
+  return { url, state };
 }
 
 export default function Edit() {
@@ -68,7 +75,7 @@ export default function Edit() {
         <h1 className="h1" style={{ margin: 0 }}>Edit</h1>
         {tab === 'projeler' && <button className="btn sm" style={{ color: 'var(--moss)' }} onClick={() => setAdding(!adding)}><Icon name="plus" size={18} />Yeni montaj</button>}
       </div>
-      <p className="small" style={{ margin: '8px 0 14px', lineHeight: '19px' }}>Ham dosyaları yükle, montajı anlat; kurguyu ve render’ı uygulama yapsın. Her revize ayrı bir versiyon olarak saklanır.</p>
+      <p className="small" style={{ margin: '8px 0 14px', lineHeight: '19px' }}>Ham videoların Drive linkini ekle, montajı anlat; Claude en iyi anları seçip altyazı ve müzikle reels yapsın. Sıraya aldığın montaj en geç yaklaşık 1 saatte hazır olur. Her revize ayrı bir versiyon olarak saklanır.</p>
       <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 16 }}>
         <button aria-pressed={tab === 'projeler'} onClick={() => setTab('projeler')}>Montaj projeleri</button>
         <button aria-pressed={tab === 'kutuphane'} onClick={() => setTab('kutuphane')}>Kütüphane ({gallery.length})</button>
@@ -112,8 +119,8 @@ export default function Edit() {
                     </span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={{ fontSize: 16, fontWeight: 600 }}>{latest.name}</span>
-                      <span className="tiny">{f ? f.name : ''} · {(latest.files || []).length} dosya · {timeAgo(latest.atMs)}</span>
-                      <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><span className={st.cls}>{st.label}</span>{list.length > 1 && <span className="pill neutral">{list.length} versiyon</span>}</span>
+                      <span className="tiny">{f ? f.name : ''} · {(latest.sources || []).length} video · {timeAgo(latest.atMs)}</span>
+                      <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><span className={st.cls} style={{ gap: 4 }}><Icon name={st.icon} size={12} />{st.label}</span>{list.length > 1 && <span className="pill neutral">{list.length} versiyon</span>}</span>
                     </span>
                     <Icon name="right" size={18} color="var(--muted)" />
                   </a>
@@ -146,69 +153,41 @@ export default function Edit() {
 }
 
 export function EditProje({ id }) {
-  const { projects, firms, updateProject, reviseProject, deleteProject } = useStore();
+  const { projects, firms, updateProject, reviseProject, deleteProject, queueProject } = useStore();
   const p = projects.find((x) => x.id === id);
-  const [up, setUp] = useState(null);
-  const [busy, setBusy] = useState('');
-  const [err, setErr] = useState('');
+  const [link, setLink] = useState('');
+  const [linkErr, setLinkErr] = useState('');
   const [brief, setBrief] = useState(null);
   const [revLabel, setRevLabel] = useState('');
   const [revNote, setRevNote] = useState('');
   const [revOpen, setRevOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const vid = useVideo(p);
   if (!p) return <div className="screen no-nav"><button className="back" onClick={() => back('/edit')}><Icon name="left" size={20} />Edit</button><p className="small">Proje bulunamadı ya da silindi.</p></div>;
 
   const firm = firms.find((f) => f.id === p.firmId);
-  const files = p.files || [];
+  const sources = p.sources || [];
+  const opts = { length: 30, captions: true, music: '', ...(p.opts || {}) };
   const siblings = projects.filter((x) => (x.rootId || x.id) === (p.rootId || p.id)).sort((a, b) => (a.version || 1) - (b.version || 1));
   const st = statusOf(p);
   const text = brief === null ? (p.brief || '') : brief;
+  const locked = p.status === 'sirada' || p.status === 'isleniyor';
+  const setOpt = (k, v) => updateProject(p.id, { opts: { ...opts, [k]: v } });
 
-  const upload = async (list) => {
-    if (!storage) { setErr('Dosya deposu kapalı.'); return; }
-    setErr('');
-    const added = [];
-    for (const file of Array.from(list)) {
-      const kind = kindOf(file);
-      if (kind === 'other') continue;
-      const dur = await mediaDuration(file, kind);
-      const path = 'projects/' + (p.rootId || p.id) + '/' + Date.now() + '-' + file.name.replace(/[^\w.\-]+/g, '_');
-      const task = uploadBytesResumable(sref(storage, path), file, { contentType: file.type });
-      await new Promise((res, rej) => task.on('state_changed', (s) => setUp({ name: file.name, pct: Math.round((s.bytesTransferred / s.totalBytes) * 100) }), rej, res))
-        .catch((e) => { setErr('Yükleme başarısız: ' + (e.code === 'storage/unauthorized' ? 'izin yok' : e.message)); });
-      if (task.snapshot.state !== 'success') continue;
-      const url = await getDownloadURL(task.snapshot.ref);
-      added.push({ id: 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: file.name, kind, url, path, size: file.size, duration: dur });
-    }
-    setUp(null);
-    if (added.length) await updateProject(p.id, { files: files.concat(added) });
+  const addLink = (e) => {
+    e.preventDefault();
+    const u = link.trim();
+    if (!isLink(u)) { setLinkErr('Geçerli bir link yapıştır (https:// ile başlamalı).'); return; }
+    setLinkErr('');
+    updateProject(p.id, { sources: sources.concat({ id: 's' + Date.now().toString(36), url: u, label: linkLabel(u) }) });
+    setLink('');
   };
-
-  const makePlan = async () => {
-    setErr(''); setBusy('plan');
-    await updateProject(p.id, { brief: text });
-    try {
-      const prev = p.parentId ? projects.find((x) => x.id === p.parentId) : null;
-      const r = await callFn('kurgu', { name: p.name, firmName: firm ? firm.name : '', brief: text, files, revisionNote: p.revisionNote || '', previousPlan: prev ? prev.plan : null });
-      const j = await r.json().catch(() => ({}));
-      if (r.status === 404 || r.status === 503) setErr('Kurgu asistanı henüz bağlı değil (Claude API anahtarı ve sunucu yüklemesi gerekiyor).');
-      else if (j.error === 'no_media') setErr('Önce en az bir video ya da görsel yükle.');
-      else if (!r.ok) setErr('Montaj planı yapılamadı: ' + (j.message || j.error || r.status));
-      else await updateProject(p.id, { plan: j.plan, renderStatus: '', outputUrl: '', renderError: '' });
-    } catch (e) { setErr('Sunucuya ulaşılamadı.'); }
-    setBusy('');
+  const queue = async () => {
+    setBusy(true);
+    await queueProject(p, { brief: text });
+    setBusy(false);
   };
-
-  const render = async () => {
-    setErr(''); setBusy('render');
-    await updateProject(p.id, { renderStatus: 'kuyruk', renderError: '', outputUrl: '' });
-    try {
-      const r = await callFn('render-background', { projectId: p.id, plan: p.plan, files });
-      if (!(r.ok || r.status === 202)) { await updateProject(p.id, { renderStatus: 'hata', renderError: 'Render servisine ulaşılamadı (' + r.status + ')' }); }
-    } catch (e) { await updateProject(p.id, { renderStatus: 'hata', renderError: 'Sunucuya ulaşılamadı' }); }
-    setBusy('');
-  };
-
   const revise = async (e) => {
     e.preventDefault();
     if (!revNote.trim()) return;
@@ -217,102 +196,128 @@ export function EditProje({ id }) {
     go('/edit/' + nid);
   };
 
-  const fileById = Object.fromEntries(files.map((f) => [f.id, f]));
-  const total = p.plan ? (p.plan.clips || []).reduce((a, c) => a + (c.length || 0), 0) + (p.plan.endText ? 2.5 : 0) : 0;
+  const srcById = Object.fromEntries(sources.map((f, i) => [f.id, { ...f, n: i + 1 }]));
+  const total = p.plan ? (p.plan.clips || []).reduce((a, c) => a + (c.length || 0), 0) : 0;
 
   return (
     <div className="screen no-nav">
+      <Hero tall color={brandOf(firm).edge} Art={Camera} />
       <button className="back" onClick={() => back('/edit')}><Icon name="left" size={20} />Edit</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <a href={firm ? '#/firma/' + firm.id : '#/firmalar'} className="pill ok" style={{ gap: 6, padding: '4px 10px 4px 4px' }}><Logo firm={firm} size={22} />{firm ? firm.name : ''}</a>
         <span className="pill neutral">v{p.version || 1}</span>
-        <span className={st.cls}>{st.label}</span>
+        <span className={st.cls} style={{ gap: 4 }}><Icon name={st.icon} size={12} />{st.label}</span>
       </div>
-      <h1 className="h1" style={{ fontSize: 28, lineHeight: '32px', margin: '12px 0 6px' }}>{p.name}</h1>
+      <h1 style={{ fontFamily: 'var(--display)', fontSize: 22, lineHeight: '28px', fontWeight: 700, margin: '12px 0 6px' }}>{p.name}</h1>
       {p.revisionNote && <p className="small" style={{ margin: '0 0 6px' }}>Revize isteği: “{p.revisionNote}”</p>}
 
       {siblings.length > 1 && (
         <>
-          <h2 className="h2">Versiyonlar</h2>
+          <h2 className="h2 hi"><span className="h-ic"><Icon name="film" size={14} /></span>Versiyonlar</h2>
           <div className="chips">
             {siblings.map((v) => <a key={v.id} href={'#/edit/' + v.id} className="chip" aria-pressed={v.id === p.id}>v{v.version || 1}{v.revisionLabel ? ' · ' + v.revisionLabel : ''}</a>)}
           </div>
         </>
       )}
 
-      <div className="row-h2"><h2 className="h2">1 · Ham dosyalar</h2><span className="small">{files.length} dosya</span></div>
+      {(p.status === 'sirada' || p.status === 'isleniyor') && (
+        <div className="card pad" role="status" style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center', background: 'var(--wait-soft)', borderColor: 'transparent' }}>
+          <span className="row-ic" style={{ background: '#fff', color: 'var(--wait)' }}><Icon name={p.status === 'sirada' ? 'clock' : 'film'} size={16} /></span>
+          <span className="small" style={{ color: 'var(--wait)', fontWeight: 600 }}>{p.status === 'sirada' ? 'Claude’un sırasında. En geç yaklaşık 1 saat içinde montajlanır; bitince bildirim gelir.' : 'Claude şu an montajlıyor. Birkaç dakika içinde burada olacak.'}</span>
+        </div>
+      )}
+      {p.status === 'hata' && <p className="err" role="alert" style={{ marginTop: 14 }}>Montaj yapılamadı: {p.workerNote || 'bilinmeyen hata'}. Linkleri ve paylaşım iznini kontrol edip tekrar sıraya al.</p>}
+
+      {p.video && (
+        <>
+          <h2 className="h2 hi"><span className="h-ic"><Icon name="check" size={14} /></span>Reels hazır</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+            {vid.url ? <video src={vid.url} controls playsInline style={{ width: '100%', maxWidth: 360, borderRadius: 16, background: '#000', boxShadow: 'var(--sh2)' }} />
+              : <div className="card empty" style={{ width: '100%' }}>{vid.state === 'hata' ? 'Video yüklenemedi.' : 'Video yükleniyor…'}</div>}
+            {vid.url && <a className="btn primary" href={vid.url} download={(p.name || 'reels').replace(/[^\wğüşöçıİĞÜŞÖÇ() -]+/g, '') + '.mp4'} style={{ width: '100%' }}><Icon name="upload" size={18} color="#fff" />Telefona indir (MP4)</a>}
+            <span className="tiny">{[p.video.duration ? Math.round(p.video.duration) + ' sn' : '', p.video.size ? (p.video.size / 1048576).toFixed(1) + ' MB' : '', p.video.note || ''].filter(Boolean).join(' · ')}</span>
+          </div>
+        </>
+      )}
+
+      <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="camera" size={14} /></span>1 · Ham videolar</h2><span className="small">{sources.length} link</span></div>
       <div className="card list">
-        {files.map((f) => (
+        {sources.map((f, i) => (
           <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px' }}>
-            <span aria-hidden="true" style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 10, background: 'var(--track)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name={f.kind === 'audio' ? 'music' : f.kind === 'image' ? 'star' : 'camera'} size={18} />
-            </span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</span>
-              <span className="tiny">{f.kind === 'video' ? 'Video' : f.kind === 'image' ? 'Görsel' : 'Ses'}{f.duration ? ' · ' + f.duration + ' sn' : ''}{f.size ? ' · ' + (f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') : ''}</span>
-            </span>
-            <button aria-label={f.name + ' dosyasını projeden çıkar'} onClick={() => updateProject(p.id, { files: files.filter((x) => x.id !== f.id) })} style={{ width: 44, height: 44, border: 0, background: 'transparent' }}><Icon name="trash" size={18} color="#7C857E" /></button>
+            <span className="row-ic"><b style={{ fontSize: 12 }}>{i + 1}</b></span>
+            <a href={f.url} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{f.label || 'Bağlantı'}</span>
+              <span className="tiny" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.url}</span>
+            </a>
+            {!locked && <button aria-label={(i + 1) + '. linki çıkar'} onClick={() => updateProject(p.id, { sources: sources.filter((x) => x.id !== f.id) })} style={{ width: 44, height: 44, border: 0, background: 'transparent' }}><Icon name="trash" size={18} color="var(--muted)" /></button>}
           </div>
         ))}
-        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 56, fontWeight: 600, color: 'var(--moss)', cursor: 'pointer' }}>
-          <Icon name="upload" size={20} />{up ? up.name + ' · %' + up.pct : 'Video, fotoğraf ya da müzik yükle'}
-          <input type="file" multiple accept="video/*,image/*,audio/*" className="sr" onChange={(e) => { upload(e.target.files); e.target.value = ''; }} disabled={Boolean(up)} />
-        </label>
+        {!locked && (
+          <form onSubmit={addLink} style={{ display: 'flex', gap: 8, padding: 12 }}>
+            <label htmlFor="lnk" className="sr">Video linki</label>
+            <input id="lnk" className="input" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="Google Drive linkini yapıştır" />
+            <button className="btn primary" type="submit" style={{ flexShrink: 0 }}>Ekle</button>
+          </form>
+        )}
       </div>
+      {linkErr && <p className="err" role="alert" style={{ marginTop: 8 }}>{linkErr}</p>}
+      <details className="card pad small" style={{ marginTop: 10 }}>
+        <summary style={{ fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}>Videoyu Drive’a nasıl yüklerim?</summary>
+        <ol style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: '21px' }}>
+          <li>Telefonda Google Drive’ı aç, + → Yükle ile videoları seç (Wi‑Fi’de yükle).</li>
+          <li>Videonun yanındaki ⋮ → Paylaş → Genel erişim: “Bağlantıya sahip olan herkes”.</li>
+          <li>“Bağlantıyı kopyala” de ve buraya yapıştır. Her video için ayrı link ekle.</li>
+        </ol>
+      </details>
 
-      <h2 className="h2">2 · Montajı anlat</h2>
+      <h2 className="h2 hi"><span className="h-ic"><Icon name="msg" size={14} /></span>2 · Montajı anlat</h2>
       <label htmlFor="tarif" className="sr">Montaj tarifi</label>
-      <textarea id="tarif" className="textarea" style={{ minHeight: 130 }} value={text} onChange={(e) => setBrief(e.target.value)}
-        placeholder="Örn. 30 saniyelik dikey reels. Salon girişiyle aç, sonra işlem öncesi ve sonrası yan yana. Hızlı kesmeler, enerjik müzik, sonda logo ve ‘Randevu için DM’ yazısı." />
-      <button className="btn primary" style={{ width: '100%', marginTop: 10 }} disabled={busy === 'plan' || !files.length} onClick={makePlan}>
-        <Icon name="sparkle" size={18} color="#fff" />{busy === 'plan' ? 'Claude montajı planlıyor…' : p.plan ? 'Montajı yeniden planla' : 'Montajı yap'}
-      </button>
+      <textarea id="tarif" className="textarea" style={{ minHeight: 130 }} value={text} disabled={locked} onChange={(e) => setBrief(e.target.value)} onBlur={() => brief !== null && updateProject(p.id, { brief: text })}
+        placeholder="Örn. Enerjik bir tanıtım reels’i. En iştah açıcı anlar, hızlı kesmeler, sonda logo ve ‘Hemen sipariş ver’ yazısı." />
+      <div className="card list" style={{ marginTop: 10 }}>
+        <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>Süre</span>
+          {[15, 30, 45, 60].map((n) => <button key={n} type="button" className="chip" disabled={locked} aria-pressed={opts.length === n} onClick={() => setOpt('length', n)}>{n} sn</button>)}
+        </div>
+        <Switch on={opts.captions} onToggle={() => !locked && setOpt('captions', !opts.captions)} label="Altyazı ekle" hint="Konuşmalar otomatik Türkçe altyazıya çevrilir" />
+        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label htmlFor="muz" style={{ fontSize: 14, fontWeight: 600 }}>Müzik (isteğe bağlı)</label>
+          <input id="muz" className="input" disabled={locked} defaultValue={opts.music} onBlur={(e) => e.target.value !== opts.music && setOpt('music', e.target.value.trim())} placeholder="Telifsiz müziğin Drive linki" />
+          <span className="tiny">Boş bırakırsan videonun kendi sesi kalır. Instagram’da paylaşırken uygulamanın kendi müziğini de ekleyebilirsin.</span>
+        </div>
+      </div>
+      {!locked && (
+        <button className="btn primary" style={{ width: '100%', marginTop: 12 }} disabled={busy || !sources.length} onClick={queue}>
+          <Icon name="sparkle" size={18} color="#fff" />{p.video ? 'Montajı yeniden yaptır' : 'Montajı Claude’a gönder'}
+        </button>
+      )}
+      {!sources.length && <p className="tiny" style={{ marginTop: 6 }}>Önce en az bir video linki ekle.</p>}
 
       {p.plan && (
         <>
-          <div className="row-h2"><h2 className="h2">3 · Montaj planı</h2><span className="small">{p.plan.aspect} · ~{Math.round(total)} sn</span></div>
-          <p className="card pad" style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>{p.plan.summary}</p>
+          <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="flow" size={14} /></span>Claude’un montaj planı</h2><span className="small">~{Math.round(total)} sn</span></div>
+          {p.plan.summary && <p className="card pad note" style={{ margin: 0, fontSize: 15, lineHeight: '22px' }}>{p.plan.summary}</p>}
           <div className="card list" style={{ marginTop: 10 }}>
             {(p.plan.clips || []).map((c, i) => {
-              const f = fileById[c.fileId];
+              const f = srcById[c.sourceId] || null;
               return (
                 <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 14px', alignItems: 'flex-start' }}>
                   <span style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, background: 'var(--moss-soft)', color: 'var(--moss)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f ? f.name : 'Dosya silinmiş'}</span>
-                    <span className="tiny">{c.trim}–{(c.trim + c.length).toFixed(1)} sn · {c.length} sn{c.transition && c.transition !== 'none' ? ' · ' + c.transition : ''}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>{f ? f.n + '. video' : 'Video'}{c.what ? ' · ' + c.what : ''}</span>
+                    <span className="tiny">{c.trim}–{(Number(c.trim) + Number(c.length)).toFixed(1)} sn · {c.length} sn</span>
                     {c.text && <span style={{ fontSize: 13, fontWeight: 600 }}>“{c.text}”</span>}
                   </span>
                 </div>
               );
             })}
-            {(p.plan.musicFileId || p.plan.endText) && (
-              <div style={{ padding: '10px 14px' }} className="small">
-                {p.plan.musicFileId && fileById[p.plan.musicFileId] ? 'Müzik: ' + fileById[p.plan.musicFileId].name : ''}{p.plan.musicFileId && p.plan.endText ? ' · ' : ''}{p.plan.endText ? 'Kapanış: “' + p.plan.endText + '”' : ''}
-              </div>
-            )}
           </div>
-
-          <h2 className="h2">4 · Render</h2>
-          {(p.renderStatus === 'kuyruk' || p.renderStatus === 'render') && <p className="card pad small" role="status" style={{ margin: 0 }}>Render alınıyor. Kısa videolarda genelde 1–3 dakika sürer; bu sayfa bitince kendiliğinden güncellenir.</p>}
-          {p.renderStatus === 'hata' && <p className="err" role="alert" style={{ margin: '0 0 10px' }}>{p.renderError || 'Render başarısız.'}</p>}
-          {p.outputUrl && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
-              <video src={p.outputUrl} controls playsInline style={{ width: '100%', maxWidth: 360, borderRadius: 16, background: '#000' }} />
-              <a className="btn" href={p.outputUrl} target="_blank" rel="noreferrer" style={{ width: '100%', color: 'var(--moss)' }}>Ham ürünü aç / indir (MP4)</a>
-            </div>
-          )}
-          {p.renderStatus !== 'kuyruk' && p.renderStatus !== 'render' && (
-            <button className="btn primary" style={{ width: '100%', marginTop: 10 }} disabled={busy === 'render'} onClick={render}>
-              <Icon name="film" size={18} color="#fff" />{p.outputUrl ? 'Yeniden render al' : 'Render al'}
-            </button>
-          )}
         </>
       )}
 
-      {p.outputUrl && (
+      {p.video && (
         <>
-          <h2 className="h2">5 · Revize</h2>
+          <h2 className="h2 hi"><span className="h-ic"><Icon name="edit" size={14} /></span>Revize</h2>
           {!revOpen ? (
             <button className="btn" style={{ width: '100%' }} onClick={() => setRevOpen(true)}><Icon name="edit" size={18} />Revize iste (yeni versiyon açılır)</button>
           ) : (
@@ -324,7 +329,7 @@ export function EditProje({ id }) {
               </div>
               <div className="field">
                 <label className="label" htmlFor="rn">Ne değişsin?</label>
-                <textarea id="rn" className="textarea" value={revNote} onChange={(e) => setRevNote(e.target.value)} required placeholder="Örn. Berika’nın videosundaki gibi daha yumuşak geçişler, daha sakin müzik, yazılar daha az olsun." />
+                <textarea id="rn" className="textarea" value={revNote} onChange={(e) => setRevNote(e.target.value)} required placeholder="Örn. Daha yumuşak geçişler, daha sakin müzik, yazılar daha az olsun." />
               </div>
               <div className="grid2"><button type="button" className="btn" onClick={() => setRevOpen(false)}>Vazgeç</button><button className="btn primary" type="submit">Revizeyi aç</button></div>
             </form>
@@ -332,11 +337,9 @@ export function EditProje({ id }) {
         </>
       )}
 
-      {err && <p className="err" role="alert" style={{ marginTop: 14 }}>{err}</p>}
-
       <div style={{ marginTop: 28 }}>
         {!confirmDel
-          ? <button className="btn danger" style={{ width: '100%' }} onClick={() => setConfirmDel(true)}><Icon name="trash" size={18} />Bu versiyonu sil</button>
+          ? <button className="btn danger" style={{ width: '100%' }} onClick={() => setConfirmDel(true)}><Icon name="trash" size={18} color="#fff" />Bu versiyonu sil</button>
           : (
             <div className="card pad stack" style={{ gap: 10 }}>
               <span style={{ fontSize: 15, fontWeight: 600 }}>“{p.name}” silinsin mi? Diğer versiyonlar kalır.</span>

@@ -28,6 +28,7 @@ export function doc(a, ...parts) {
 export const query = (c, ...mods) => ({ ...c, mods });
 export const orderBy = (field, dir = 'asc') => ({ kind: 'order', field, dir });
 export const limit = (n) => ({ kind: 'limit', n });
+export const where = (field, op, value) => ({ kind: 'where', field, op, value });
 
 function resolve(old, patch, merge) {
   const out = merge ? { ...(old || {}) } : {};
@@ -50,6 +51,7 @@ function snapDoc(path) {
 function runQuery(q) {
   let docs = [...store.keys()].filter((p) => parentOf(p) === q.path).map(snapDoc);
   (q.mods || []).forEach((m) => {
+    if (m.kind === 'where') docs = docs.filter((d) => d.data()[m.field] === m.value);
     if (m.kind === 'order') {
       const val = (d) => { const x = d.data()[m.field]; return x && x.toMillis ? x.toMillis() : x; };
       docs.sort((a, b) => (val(a) < val(b) ? -1 : val(a) > val(b) ? 1 : 0) * (m.dir === 'desc' ? -1 : 1));

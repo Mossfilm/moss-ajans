@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Pen, Hero } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
-import { PostPreview, startDrawing } from '../components/Post.jsx';
+import { PostPreview } from '../components/Post.jsx';
 import { todayYmd, ymd, addDays, upcomingSpecialDays, TYPES } from '../data.js';
 import { auth } from '../firebase.js';
 
-const KEY = 'moss-asistan-chat';
+const JOB_LABEL = { soru: 'Soru', post: 'Özel tasarım', video: 'Montaj', diger: 'İş' };
+const JOB_STATUS = { bekliyor: ['Sırada', 'pill wait'], isleniyor: ['Claude yapıyor', 'pill ok'], tamam: ['Bitti', 'pill ok'], hata: ['Yapılamadı', 'pill alert'] };
 const CHIPS = [
   'Yaklaşan özel günler için tüm firmalara post hazırla',
   'Hangi firmanın içeriği azalıyor?',
@@ -15,19 +16,20 @@ const CHIPS = [
 ];
 
 export default function Asistan() {
-  const { firms, tasks, gallery, addGallery, addTask } = useStore();
+  const { firms, tasks, gallery, addGallery, addTask, chat, jobs, addChat, addJob, clearChat, cancelJob, user } = useStore();
   const r = useRoute();
   const focusFirmId = r.q.get('firma');
   const focusItemId = r.q.get('galeri');
   const focusFirm = firms.find((f) => f.id === focusFirmId);
   const focusItem = gallery.find((g) => g.id === focusItemId);
-  const [msgs, setMsgs] = useState(() => { try { return JSON.parse(sessionStorage.getItem(KEY) || '[]'); } catch (e) { return []; } });
+  const msgs = chat;
+  const [showJobs, setShowJobs] = useState(false);
+  const open = jobs.filter((j) => j.status === 'bekliyor' || j.status === 'isleniyor');
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
-  const [setup, setSetup] = useState(false);
   const endRef = useRef(null);
 
-  useEffect(() => { try { sessionStorage.setItem(KEY, JSON.stringify(msgs.slice(-40))); } catch (e) { /* yok say */ } endRef.current && endRef.current.scrollIntoView({ block: 'end' }); }, [msgs, busy]);
+  useEffect(() => { endRef.current && endRef.current.scrollIntoView({ block: 'end' }); }, [msgs.length, busy]);
 
   const context = () => {
     const t0 = todayYmd(); const end = ymd(addDays(new Date(), 30));
@@ -46,12 +48,13 @@ export default function Asistan() {
     for (const a of actions) {
       try {
         if (a.action === 'create_post') {
-          const { action, firmId, title, caption, tags, date, time, image_prompt, ...rest } = a;
-          const draw = Boolean(image_prompt);
-          const spec = { ...rest, template: draw ? 'gorsel' : (rest.template === 'gorsel' ? 'duyuru' : rest.template), imagePrompt: image_prompt || '' };
-          const id = await addGallery({ firmId, kind: 'post', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: draw ? 'chatgpt' : 'asistan', spec, imageStatus: draw ? 'hazirlaniyor' : '' });
-          if (draw) startDrawing(id, image_prompt, spec.format).catch(() => {});
-          done.push({ kind: 'post', id, firmId, title, spec, draw });
+          const { action, firmId, title, caption, tags, date, time, ...rest } = a;
+          const spec = { ...rest, template: ['anma', 'kutlama', 'duyuru', 'urun', 'alinti'].includes(rest.template) ? rest.template : 'duyuru' };
+          const id = await addGallery({ firmId, kind: 'post', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: 'asistan', spec });
+          done.push({ kind: 'post', id, firmId, title, spec });
+        } else if (a.action === 'queue_for_claude') {
+          const id = await addJob({ kind: ['post', 'video', 'diger'].includes(a.kind) ? a.kind : 'diger', firmId: a.firmId || '', text: a.brief || '' });
+          done.push({ kind: 'job', id, firmId: a.firmId || '', title: a.brief || 'Claude sırasına eklendi' });
         } else if (a.action === 'create_video') {
           const { firmId, title, scenes, music, caption, tags, date, time } = a;
           const id = await addGallery({ firmId, kind: 'video', title, caption: caption || '', tags: tags || '', date: date || '', time: time || '', source: 'asistan', spec: { scenes: scenes || [], music: music || '' } });
@@ -66,11 +69,17 @@ export default function Asistan() {
     return done;
   };
 
+  const toQueue = async (q, why) => {
+    const id = await addJob({ kind: 'soru', text: q, firmId: focusFirm ? focusFirm.id : '' });
+    await addChat({ role: 'assistant', via: 'sistem', jobId: id, text: why + ' Sorunu Claude’un sırasına aldım; en geç yaklaşık 1 saat içinde cevabı burada olacak.' });
+  };
+
   const ask = async (text) => {
     const q = (text || '').trim();
     if (!q || busy) return;
     const next = msgs.concat({ role: 'user', text: q });
-    setMsgs(next); setDraft(''); setBusy(true);
+    setDraft(''); setBusy(true);
+    await addChat({ role: 'user', text: q });
     try {
       const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
       const res = await fetch('/.netlify/functions/asistan', {
@@ -78,18 +87,17 @@ export default function Asistan() {
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
         body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, text: m.text })), context: context() })
       });
-      if (res.status === 404 || res.status === 503) { setSetup(true); setMsgs(next.concat({ role: 'assistant', text: 'Asistan henüz bağlanmadı. Bağlantı kurulunca bu mesaja cevap verebileceğim.' })); }
-      else if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setMsgs(next.concat({ role: 'assistant', text: j.error === 'unauthorized' ? 'Bu hesabın asistanı kullanma izni yok.' : 'Bir sorun oldu: ' + (j.message || res.status) }));
-      } else {
+      if (res.status === 404 || res.status === 503) await toQueue(q, 'Anlık asistan henüz bağlı değil.');
+      else if (res.status === 429) await toQueue(q, 'Anlık asistanın bugünkü ücretsiz kotası doldu.');
+      else if (res.status === 401) await addChat({ role: 'assistant', via: 'sistem', text: 'Bu hesabın asistanı kullanma izni yok.' });
+      else if (!res.ok) await toQueue(q, 'Anlık asistan şu an cevap veremedi.');
+      else {
         const j = await res.json();
         const done = await apply(j.actions || []);
-        setMsgs(next.concat({ role: 'assistant', text: j.reply, done }));
+        await addChat({ role: 'assistant', via: j.via || 'gemini', text: j.reply, done });
       }
     } catch (e) {
-      setSetup(true);
-      setMsgs(next.concat({ role: 'assistant', text: 'Asistana ulaşılamadı. İnternet bağlantını kontrol et ya da biraz sonra tekrar dene.' }));
+      await toQueue(q, 'Anlık asistana ulaşılamadı.');
     }
     setBusy(false);
   };
@@ -101,12 +109,32 @@ export default function Asistan() {
         <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--moss)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" color="#fff" /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>MOSS Asistan<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, color: 'var(--moss)' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: busy ? 'var(--wait)' : '#3A8A71' }} />{busy ? 'Yazıyor' : 'Hazır'}</span></h1>
+          {open.length > 0 && <button className="link" onClick={() => setShowJobs(!showJobs)} style={{ fontSize: 12 }}>Claude sırasında {open.length} iş {showJobs ? '▴' : '▾'}</button>}
           <span className="tiny">{focusFirm ? 'Konu: ' + focusFirm.name + (focusItem ? ' · ' + focusItem.title : '') : 'Firmalar, takvim ve galeri hakkında sor ya da iste'}</span>
         </div>
-        {msgs.length > 0 && <button className="link" onClick={() => { setMsgs([]); sessionStorage.removeItem(KEY); }}>Temizle</button>}
+        {msgs.length > 0 && <button className="link" onClick={() => clearChat()}>Temizle</button>}
       </div>
 
       <div style={{ flex: 1, padding: '16px 16px calc(220px + var(--safe-b))', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560, width: '100%', margin: '0 auto' }}>
+        {showJobs && open.length > 0 && (
+          <div className="card list">
+            {open.map((j) => {
+              const f = firms.find((x) => x.id === j.firmId);
+              const [l, cls] = JOB_STATUS[j.status] || JOB_STATUS.bekliyor;
+              return (
+                <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+                  {f ? <Logo firm={f} size={28} radius={8} /> : <span className="h-ic"><Icon name="sparkle" size={14} /></span>}
+                  <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{JOB_LABEL[j.kind] || 'İş'} · {j.text || ''}</span>
+                    <span className="tiny">{j.byName} · {j.status === 'bekliyor' ? 'en geç ~1 saat' : 'şu an yapılıyor'}</span>
+                  </span>
+                  <span className={cls}>{l}</span>
+                  {j.status === 'bekliyor' && j.by === user.uid && <button aria-label="Sıradan çıkar" onClick={() => cancelJob(j.id)} style={{ width: 36, height: 36, border: 0, background: 'transparent' }}><Icon name="trash" size={16} color="var(--muted)" /></button>}
+                </div>
+              );
+            })}
+          </div>
+        )}
         {msgs.length === 0 && (
           <div style={{ textAlign: 'center', padding: '20px 8px 4px' }}>
             <span className="empty-ic glow" style={{ margin: '0 auto 14px' }}><Icon name="sparkle" size={28} /></span>
@@ -126,28 +154,34 @@ export default function Asistan() {
               <li>“Boğaziçi VIP’e Öğretmenler Günü fikri ver, tartışalım”</li>
               <li>“Mutlu Çocuklar’a 3 Kasım’a çekim ekle”</li>
             </ul>
-            <p className="tiny" style={{ margin: '10px 0 0' }}>Hazırladığım postlar ve videolar firmanın galerisine taslak olarak düşer.</p>
+            <p className="tiny" style={{ margin: '10px 0 0' }}>Sohbet, fikir, şablon postlar ve takvim işleri anında yapılır. Montaj ve özel tasarımları Claude saatte bir yapar; en geç yaklaşık 1 saatte uygulamaya düşer.</p>
           </div>
         )}
         {msgs.map((m, i) => m.role === 'user'
-          ? <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '85%', padding: '12px 14px', borderRadius: '16px 16px 4px 16px', background: 'var(--moss)', color: '#fff', fontSize: 15, lineHeight: '21px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+          ? (
+            <div key={m.id || i} style={{ alignSelf: 'flex-end', maxWidth: '85%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+              {m.by !== user.uid && <span className="tiny">{m.byName}</span>}
+              <div style={{ padding: '12px 14px', borderRadius: '16px 16px 4px 16px', background: 'var(--moss)', color: '#fff', fontSize: 15, lineHeight: '21px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+            </div>
+          )
           : (
-            <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '88%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="card" style={{ padding: '12px 14px', borderRadius: '4px 16px 16px 16px', fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+            <div key={m.id || i} style={{ alignSelf: 'flex-start', maxWidth: '88%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span className="tiny" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{m.via === 'claude' ? 'Claude' : m.via === 'sistem' ? 'Moss' : 'Asistan (anlık)'}{m.jobId && (() => { const j = jobs.find((x) => x.id === m.jobId); const st = j ? JOB_STATUS[j.status] : null; return st ? <span className={st[1]} style={{ fontSize: 11, padding: '2px 6px' }}>{st[0]}</span> : null; })()}</span>
+              <div className="card" style={{ padding: '12px 14px', borderRadius: '4px 16px 16px 16px', fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap', background: m.via === 'sistem' ? 'var(--wait-soft)' : undefined }}>{m.text}</div>
               {(m.done || []).length > 0 && (
                 <div style={{ padding: '12px 14px', borderRadius: 16, background: 'var(--moss-soft)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--moss)' }}>Uygulamada yaptıklarım</span>
                   {m.done.map((d) => {
                     const f = firms.find((x) => x.id === d.firmId);
-                    const href = d.kind === 'task' ? '#/is/' + d.id : '#/galeri/' + d.id;
+                    const href = d.kind === 'task' ? '#/is/' + d.id : d.kind === 'job' ? '#/asistan' : d.kind === 'project' ? '#/edit/' + d.id : '#/galeri/' + d.id;
                     return (
                       <a key={d.id} href={href} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {d.kind === 'post' && d.spec ? <PostPreview spec={d.spec} firm={f} width={56} radius={8} /> : <Logo firm={f} size={40} radius={10} />}
                         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontSize: 14, fontWeight: 600 }}>{d.title}</span>
-                          <span className="tiny">{(f ? f.name + ' · ' : '') + (d.kind === 'post' ? (d.draw ? 'ChatGPT görseli çiziyor, bitince galeride' : 'Post galeriye eklendi') : d.kind === 'video' ? 'Video galeriye eklendi' : 'Takvime eklendi')}</span>
+                          <span className="tiny">{(f ? f.name + ' · ' : '') + (d.kind === 'post' ? 'Post galeriye eklendi' : d.kind === 'video' ? 'Video galeriye eklendi' : d.kind === 'job' ? 'Claude sırasında, en geç ~1 saat' : d.kind === 'project' ? 'Montaj hazır' : 'Takvime eklendi')}</span>
                         </span>
-                        <Icon name="right" size={16} color="#7C857E" />
+                        <Icon name="right" size={16} color="var(--muted)" />
                       </a>
                     );
                   })}
@@ -156,11 +190,6 @@ export default function Asistan() {
             </div>
           ))}
         {busy && <div role="status" aria-label="Asistan yazıyor" className="card" style={{ alignSelf: 'flex-start', padding: '14px 16px', borderRadius: '4px 18px 18px 18px', display: 'flex', gap: 5 }}><span className="dot" /><span className="dot" /><span className="dot" /></div>}
-        {setup && (
-          <div className="card pad small" style={{ lineHeight: '19px' }}>
-            Kurulum notu: Asistanın çalışması için Netlify’a <b>ANTHROPIC_API_KEY</b> (Claude), <b>OPENAI_API_KEY</b> (ChatGPT görselleri), <b>FIREBASE_API_KEY</b> ve <b>ALLOWED_EMAILS</b> ayarlarının girilmesi ve uygulamanın GitHub ya da Netlify CLI ile yüklenmesi gerekiyor.
-          </div>
-        )}
         <div ref={endRef} />
       </div>
 
