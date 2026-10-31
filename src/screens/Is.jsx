@@ -4,6 +4,8 @@ import { Logo, Icon, TypePill, Check, back, go, assigneeLabel } from '../compone
 import { STAGES, dayLabel } from '../data.js';
 import { Thread } from './Firma.jsx';
 import { useAsk } from '../components/Dialog.jsx';
+import { Hero, TYPE_ART } from '../components/Art.jsx';
+import { TYPES } from '../data.js';
 
 export default function Is({ id }) {
   const { tasks, firms, users, updateTask, setStage, toggleDone, deleteTask, addComment, addRevision } = useStore();
@@ -22,6 +24,7 @@ export default function Is({ id }) {
 
   return (
     <div className="screen no-nav">
+      <Hero tall color={(TYPES[t.type] || TYPES.diger).dot} Art={TYPE_ART[t.type] || TYPE_ART.diger} />
       <div className="topbar">
         <button className="back" onClick={() => back()}><Icon name="left" size={20} />Geri</button>
         <a className="btn sm" href={'#/duzenle/' + t.id}><Icon name="edit" size={16} />Düzenle</a>
@@ -50,9 +53,10 @@ export default function Is({ id }) {
       </div>
 
       <div className="card" style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
-        {[['Tarih', t.date ? dayLabel(t.date) + (t.time ? ', ' + t.time : '') : 'Tarih yok'], ['Sorumlu', who], ['Konum', t.location || '—'], ['Teslim', t.deliver ? dayLabel(t.deliver) : '—']].map(([l, v], i) => (
-          <div key={l} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderRight: i % 2 === 0 ? '1px solid var(--line-2)' : 0, borderBottom: i < 2 ? '1px solid var(--line-2)' : 0 }}>
-            <span className="tiny">{l}</span><span style={{ fontSize: 15, fontWeight: 600 }}>{v}</span>
+        {[['cal', 'Tarih', t.date ? dayLabel(t.date) + (t.time ? ', ' + t.time : '') : 'Tarih yok'], ['user', 'Sorumlu', who], ['pin', 'Konum', t.location || '—'], ['send', 'Teslim', t.deliver ? dayLabel(t.deliver) : '—']].map(([ic, l, v], i) => (
+          <div key={l} style={{ padding: '14px 14px', display: 'flex', gap: 10, borderRight: i % 2 === 0 ? '1px solid var(--line-2)' : 0, borderBottom: i < 2 ? '1px solid var(--line-2)' : 0 }}>
+            <span className="row-ic" style={{ marginTop: 2 }}><Icon name={ic} size={15} /></span>
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}><span className="tiny">{l}</span><span style={{ fontSize: 14, fontWeight: 600 }}>{v}</span></span>
           </div>
         ))}
       </div>
@@ -61,9 +65,9 @@ export default function Is({ id }) {
         {t.done ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}
       </button>
 
-      {t.note && <><h2 className="h2">Not</h2><p className="card pad" style={{ margin: 0, fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{t.note}</p></>}
+      {t.note && <><h2 className="h2 hi"><span className="h-ic"><Icon name="msg" size={14} /></span>Not</h2><p className="card pad note" style={{ margin: 0, fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{t.note}</p></>}
 
-      <div className="row-h2"><h2 className="h2">Kontrol listesi</h2><span className="small">{list.length ? list.filter((c) => c.done).length + '/' + list.length + ' hazır' : ''}</span></div>
+      <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="check" size={14} /></span>Kontrol listesi</h2><span className="small">{list.length ? list.filter((c) => c.done).length + '/' + list.length + ' hazır' : ''}</span></div>
       <div className="card list">
         {list.map((c) => (
           <div key={c.id} style={{ display: 'flex', alignItems: 'center' }}>
@@ -99,7 +103,7 @@ export default function Is({ id }) {
         </>
       )}
 
-      <div className="row-h2"><h2 className="h2">Yorumlar</h2><span className="small">{comments.length ? comments.length + ' yorum' : ''}</span></div>
+      <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="msg" size={14} /></span>Yorumlar</h2><span className="small">{comments.length ? comments.length + ' yorum' : ''}</span></div>
       <Thread items={comments} onSend={(text) => addComment(t, text)} placeholder="Yorum yaz…" emptyText="Henüz yorum yok." />
 
       <button className="btn danger" style={{ width: '100%', marginTop: 28 }} onClick={async () => { if (await ask({ title: 'İş silinsin mi?', message: '“' + t.title + '” ve yorumları kalıcı olarak silinir.', confirmText: 'Sil', danger: true })) { deleteTask(t.id); go('/'); } }}>

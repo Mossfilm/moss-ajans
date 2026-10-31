@@ -6,6 +6,8 @@ import { packageProgress } from './Firmalar.jsx';
 import { GalleryGrid } from './Galeri.jsx';
 import { useAsk } from '../components/Dialog.jsx';
 import { deltaOf } from './Performans.jsx';
+import { Hero, SECTOR_ART } from '../components/Art.jsx';
+import { brandOf } from '../components/Post.jsx';
 
 function Info({ firm }) {
   const { updateFirm, tasks, insta } = useStore();
@@ -52,9 +54,9 @@ function Info({ firm }) {
     );
   }
 
-  const Row = ({ label, value, href }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '14px 16px', fontSize: 14 }}>
-      <span style={{ color: 'var(--ink-2)' }}>{label}</span>
+  const Row = ({ label, value, href, icon }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '13px 16px', fontSize: 14 }}>
+      <span style={{ color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 10 }}>{icon && <span className="row-ic"><Icon name={icon} size={15} /></span>}{label}</span>
       {href && value ? <a href={href} target="_blank" rel="noreferrer" style={{ fontWeight: 600, color: 'var(--moss)', textAlign: 'right', wordBreak: 'break-all' }}>{value}</a>
         : <span style={{ fontWeight: 600, textAlign: 'right', color: value ? 'var(--ink)' : 'var(--muted)' }}>{value || 'Eklenmedi'}</span>}
     </div>
@@ -79,7 +81,7 @@ function Info({ firm }) {
           <div className="chips wrap">{firm.services.map((s) => <span key={s} className="card" style={{ padding: '8px 12px', fontSize: 13, fontWeight: 600, borderRadius: 10 }}>{s}</span>)}</div>
         </>
       )}
-      <div className="row-h2"><h2 className="h2">Bu ayın paketi</h2>{pr.total > 0 && <span className="small">{pr.done}/{pr.total} içerik</span>}</div>
+      <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="star" size={14} /></span>Bu ayın paketi</h2>{pr.total > 0 && <span className="small">{pr.done}/{pr.total} içerik</span>}</div>
       {pr.total === 0 && !(pk.cekim > 0) ? <div className="card pad small">Paket girilmedi. “Bilgileri düzenle”den ekleyebilirsin.</div> : (
         <div className="card pad stack" style={{ gap: 14 }}>
           {[['gonderi', 'Gönderi'], ['reels', 'Reels'], ['hikaye', 'Hikâye'], ['cekim', 'Çekim günü']].filter(([k]) => pk[k] > 0).map(([k, l]) => {
@@ -93,13 +95,13 @@ function Info({ firm }) {
           })}
         </div>
       )}
-      <h2 className="h2">Bilgiler</h2>
+      <h2 className="h2 hi"><span className="h-ic"><Icon name="user" size={14} /></span>Bilgiler</h2>
       <div className="card list">
-        <Row label="Sektör" value={firm.sector} />
-        <Row label="Instagram" value={firm.instagram ? firm.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') : ''} href={firm.instagram} />
-        <Row label="Yetkili kişi" value={firm.contact} />
-        <Row label="Telefon" value={firm.phone} href={firm.phone ? 'tel:' + firm.phone.replace(/\s/g, '') : ''} />
-        <Row label="Onay veren" value={firm.approver} />
+        <Row icon="building" label="Sektör" value={firm.sector} />
+        <Row icon="ig" label="Instagram" value={firm.instagram ? firm.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') : ''} href={firm.instagram} />
+        <Row icon="user" label="Yetkili kişi" value={firm.contact} />
+        <Row icon="phone" label="Telefon" value={firm.phone} href={firm.phone ? 'tel:' + firm.phone.replace(/\s/g, '') : ''} />
+        <Row icon="check" label="Onay veren" value={firm.approver} />
       </div>
       {firm.notes && <><h2 className="h2">Notlar</h2><p className="card pad" style={{ margin: 0, fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{firm.notes}</p></>}
       <button className="btn" style={{ width: '100%', marginTop: 14, color: 'var(--moss)' }} onClick={start}><Icon name="edit" size={18} />Bilgileri düzenle</button>
@@ -201,6 +203,7 @@ export default function Firma({ id }) {
 
   return (
     <div className="screen">
+      <Hero tall color={brandOf(firm).edge} Art={SECTOR_ART[firm.sector] || SECTOR_ART['Diğer']} />
       <button className="back" onClick={() => back('/firmalar')}><Icon name="left" size={20} />Firmalar</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '10px 0 16px' }}>
         <Logo firm={firm} size={80} radius={18} />

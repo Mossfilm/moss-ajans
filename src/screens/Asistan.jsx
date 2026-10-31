@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Pen, Hero } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
 import { PostPreview, startDrawing } from '../components/Post.jsx';
@@ -94,8 +95,9 @@ export default function Asistan() {
   };
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: 'calc(12px + var(--safe-t)) 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', isolation: 'isolate' }}>
+      <Hero />
+      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'rgba(245,244,239,.72)', WebkitBackdropFilter: 'blur(14px)', backdropFilter: 'blur(14px)', borderBottom: '1px solid var(--line)', padding: 'calc(12px + var(--safe-t)) 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--moss)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" color="#fff" /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>MOSS Asistan<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, color: 'var(--moss)' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: busy ? 'var(--wait)' : '#3A8A71' }} />{busy ? 'Yazıyor' : 'Hazır'}</span></h1>
@@ -107,16 +109,17 @@ export default function Asistan() {
       <div style={{ flex: 1, padding: '16px 16px calc(220px + var(--safe-b))', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560, width: '100%', margin: '0 auto' }}>
         {msgs.length === 0 && (
           <div style={{ textAlign: 'center', padding: '20px 8px 4px' }}>
-            <span className="empty-ic" style={{ margin: '0 auto 14px' }}><Icon name="sparkle" size={28} /></span>
+            <span className="empty-ic glow" style={{ margin: '0 auto 14px' }}><Icon name="sparkle" size={28} /></span>
             <div style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700 }}>Bugün ne üretelim?</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 }}>
-              {[['Post hazırla', 'Post hazırla: '], ['Video senaryosu', 'Reels senaryosu yaz: '], ['İş oluştur', 'Takvime iş ekle: ']].map(([l, p]) => <button key={l} className="chip" onClick={() => { setDraft(p); setTimeout(() => { const el = document.getElementById('soru'); if (el) el.focus(); }, 0); }}>{l}</button>)}
+              {[['star', 'Post hazırla', 'Post hazırla: '], ['film', 'Video senaryosu', 'Reels senaryosu yaz: '], ['cal', 'İş oluştur', 'Takvime iş ekle: ']].map(([ic, l, p]) => <button key={l} className="chip sug" onClick={() => { setDraft(p); setTimeout(() => { const el = document.getElementById('soru'); if (el) el.focus(); }, 0); }}><Icon name={ic} size={15} />{l}</button>)}
             </div>
           </div>
         )}
         {msgs.length === 0 && (
-          <div className="card pad" style={{ fontSize: 14, lineHeight: '21px' }}>
-            Örnek istekler:
+          <div className="card pad examples" style={{ fontSize: 14, lineHeight: '21px' }}>
+            <Pen className="wm" />
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}><span className="h-ic"><Icon name="sparkle" size={14} /></span>Örnek istekler</span>
             <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
               <li>“10 Kasım için tüm firmalara post hazırla”</li>
               <li>“DSG Otomotiv için kış bakımı reels’i yap”</li>

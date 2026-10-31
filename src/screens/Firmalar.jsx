@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Logo, Icon, go } from '../components/ui.jsx';
 import { SECTORS, TYPES, todayYmd, shortDate } from '../data.js';
+import { brandOf } from '../components/Post.jsx';
+import { SECTOR_ART, Clapper, Reel, Hero } from '../components/Art.jsx';
 
 export function packageProgress(firm, tasks) {
   const p = firm.package || {};
@@ -36,14 +38,15 @@ export default function Firmalar() {
 
   return (
     <div className="screen">
+      <Hero />
       <div className="topbar" style={{ marginTop: 10 }}>
         <h1 className="h1" style={{ margin: 0 }}>Firmalar</h1>
         <button className="btn sm" onClick={() => setAdding(!adding)} style={{ color: 'var(--moss)' }}><Icon name="plus" size={18} />Firma ekle</button>
       </div>
 
       <div className="grid2" style={{ marginTop: 16 }}>
-        <a href="#/galeri" className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 14 }}><Icon name="star" size={20} color="var(--moss)" />Galeri</a>
-        <a href="#/performans" className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600, fontSize: 14 }}><Icon name="ig" size={20} color="var(--moss)" />Instagram</a>
+        <a href="#/galeri" className="card shortcut"><span className="ic"><Icon name="star" size={18} /></span>Galeri<Clapper className="wm" /></a>
+        <a href="#/performans" className="card shortcut"><span className="ic"><Icon name="ig" size={18} /></span>Instagram<Reel className="wm" /></a>
       </div>
 
       {adding && (
@@ -73,8 +76,11 @@ export default function Firmalar() {
           const next = tasks.filter((t) => t.firmId === f.id && !t.done && t.date >= t0).sort((a, b) => ((a.date + (a.time || '')) < (b.date + (b.time || '')) ? -1 : 1))[0];
           const waiting = tasks.filter((t) => t.firmId === f.id && t.stage === 4 && !t.done).length;
           const pr = packageProgress(f, tasks);
+          const edge = brandOf(f).edge || 'var(--moss)';
+          const Art = SECTOR_ART[f.sector] || SECTOR_ART['Diğer'];
           return (
-            <a key={f.id} href={'#/firma/' + f.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, background: inactive ? '#F0F1EE' : undefined }}>
+            <a key={f.id} href={'#/firma/' + f.id} className={'card firm' + (inactive ? ' off' : '')} style={{ '--edge': inactive ? '#B9C3B6' : edge }}>
+              <Art className="wm" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Logo firm={f} size={56} radius={14} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -93,7 +99,7 @@ export default function Firmalar() {
                   {pr.total > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div className="tiny" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-2)' }}><span>Aylık paket</span><b style={{ color: pr.done > pr.total ? 'var(--alert)' : 'var(--ink)' }}>{pr.done}/{pr.total} içerik{pr.done > pr.total ? ' · Paket aşıldı' : ''}</b></div>
-                      <div className="bar" style={{ background: 'var(--moss-soft)' }} role="img" aria-label={'Bu ay ' + pr.total + ' içerikten ' + pr.done + ' tanesi tamamlandı'}><div style={{ width: Math.min(100, Math.round(pr.done / pr.total * 100)) + '%' }} /></div>
+                      <div className="bar firm-bar" role="img" aria-label={'Bu ay ' + pr.total + ' içerikten ' + pr.done + ' tanesi tamamlandı'}><div style={{ width: Math.min(100, Math.round(pr.done / pr.total * 100)) + '%' }} /></div>
                     </div>
                   )}
                   {waiting > 0 && <span className="pill wait" style={{ alignSelf: 'flex-start' }}>Onay bekliyor · {waiting}</span>}

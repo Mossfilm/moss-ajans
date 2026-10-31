@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Fab, TaskRow, Logo, Icon, BellButton } from '../components/ui.jsx';
 import { PostPreview } from '../components/Post.jsx';
+import { Hero, Clapper, Reel, People } from '../components/Art.jsx';
 import { todayYmd, ymd, addDays, dayLabel, DAYS, MONTHS, upcomingSpecialDays, shortDate, parseYmd } from '../data.js';
 
 const byTime = (a, b) => ((a.date + (a.time || '99')) < (b.date + (b.time || '99')) ? -1 : 1);
@@ -42,7 +43,8 @@ export default function Akis() {
 
   return (
     <div className="screen">
-      <div className="topbar">
+      <Hero />
+      <div className="topbar" style={{ paddingTop: 34 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <span className="eyebrow">{(DAYS[now.getDay()] + ', ' + now.getDate() + ' ' + MONTHS[now.getMonth()]).toLocaleUpperCase('tr-TR')}</span>
           <h1 className="h1" style={{ margin: 0 }}>{hello}{who ? ', ' + who.charAt(0).toLocaleUpperCase('tr-TR') + who.slice(1) : ''}.</h1>
@@ -51,9 +53,9 @@ export default function Akis() {
       </div>
 
       <div className="stats">
-        <button className="stat" onClick={() => { setTab('bugun'); setTimeout(() => jump('oncelikli'), 0); }}><span className="k">Bugün</span><span className="v">{String(todayLeft).padStart(2, '0')}</span><span className="s">Planlanan iş</span></button>
-        <button className={'stat' + (overdue.length ? ' late' : '')} onClick={() => { setTab('bugun'); setTimeout(() => jump('oncelikli'), 0); }}><span className="k">Geciken</span><span className="v">{String(overdue.length).padStart(2, '0')}</span><span className="s">İlgi bekliyor</span></button>
-        <button className={'stat' + (waiting.length ? ' wait' : '')} onClick={() => { setTab('bugun'); setTimeout(() => jump('onayda'), 0); }}><span className="k">Onayda</span><span className="v">{String(waiting.length).padStart(2, '0')}</span><span className="s">Müşteride</span></button>
+        <button className="stat" onClick={() => { setTab('bugun'); setTimeout(() => jump('oncelikli'), 0); }}><span className="ic"><Icon name="camera" size={16} /></span><Clapper className="wm" /><span className="k">Bugün</span><span className="v">{String(todayLeft).padStart(2, '0')}</span><span className="s">Planlanan iş</span></button>
+        <button className={'stat' + (overdue.length ? ' late' : '')} onClick={() => { setTab('bugun'); setTimeout(() => jump('oncelikli'), 0); }}><span className="ic late"><Icon name="clock" size={16} /></span><Reel className="wm" /><span className="k">Geciken</span><span className="v">{String(overdue.length).padStart(2, '0')}</span><span className="s">İlgi bekliyor</span></button>
+        <button className={'stat' + (waiting.length ? ' wait' : '')} onClick={() => { setTab('bugun'); setTimeout(() => jump('onayda'), 0); }}><span className="ic wait"><Icon name="users" size={16} /></span><People className="wm" /><span className="k">Onayda</span><span className="v">{String(waiting.length).padStart(2, '0')}</span><span className="s">Müşteride</span></button>
       </div>
       <div style={{ height: 16 }} />
 
@@ -69,6 +71,7 @@ export default function Akis() {
             : <a href={'#/yeni?date=' + t0} className="card empty"><span className="empty-ic"><Icon name="check" size={28} /></span><b style={{ fontSize: 16, color: 'var(--ink)' }}>Bugün için iş yok</b><span style={{ marginTop: 6 }}>Eklemek için dokun.</span></a>}
 
           <a href="#/cekim-plani" className="dark-card" style={{ marginTop: 22, flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+            <Clapper className="wm" />
             <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span aria-hidden="true" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="camera" size={20} color="#fff" /></span>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontFamily: 'var(--display)', fontSize: 17, fontWeight: 700 }}>Haftalık çekim planı</span><span className="sub">{shootCount ? 'Bu hafta ' + shootCount + ' çekim planlandı' : 'Stok ve özel günlere göre öneriler'}</span></span>

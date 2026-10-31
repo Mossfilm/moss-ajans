@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Hero, Camera, Clapper } from '../components/Art.jsx';
+import { brandOf } from '../components/Post.jsx';
 import { ref as sref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go } from '../components/ui.jsx';
@@ -61,6 +63,7 @@ export default function Edit() {
 
   return (
     <div className="screen">
+      <Hero art="clapper" />
       <div className="topbar" style={{ marginTop: 12 }}>
         <h1 className="h1" style={{ margin: 0 }}>Edit</h1>
         {tab === 'projeler' && <button className="btn sm" style={{ color: 'var(--moss)' }} onClick={() => setAdding(!adding)}><Icon name="plus" size={18} />Yeni montaj</button>}
@@ -85,7 +88,14 @@ export default function Edit() {
               <button className="btn primary" type="submit">Projeyi aç</button>
             </form>
           )}
-          {groups.length === 0 && !adding && <div className="card empty">Henüz montaj projesi yok. “Yeni montaj” ile başla.</div>}
+          {groups.length === 0 && !adding && (
+            <div className="card empty illus">
+              <Camera className="big-art" />
+              <b style={{ fontSize: 16, color: 'var(--ink)' }}>Henüz montaj projesi yok</b>
+              <span style={{ marginTop: 6 }}>“Yeni montaj” ile başla.</span>
+              <button className="btn primary" style={{ marginTop: 20 }} onClick={() => setAdding(true)}><Icon name="plus" size={18} />Yeni montaj oluştur</button>
+            </div>
+          )}
           <div className="stack">
             {groups.map((list) => {
               const latest = list[0];
@@ -93,15 +103,19 @@ export default function Edit() {
               const f = firms.find((x) => x.id === latest.firmId);
               const st = statusOf(latest);
               return (
-                <div key={root.id} className="card" style={{ overflow: 'hidden' }}>
-                  <a href={'#/edit/' + latest.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14 }}>
-                    <Logo firm={f} size={48} radius={12} />
+                <div key={root.id} className="card firm" style={{ '--edge': brandOf(f).edge || 'var(--moss)', padding: 0, gap: 0 }}>
+                  <a href={'#/edit/' + latest.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '14px 14px 14px 17px' }}>
+                    <span className="thumb" style={{ '--tb': brandOf(f).bg }}>
+                      <Logo firm={f} size={30} radius={8} />
+                      <span className="play"><Icon name="up" size={12} color="#fff" width={2.6} /></span>
+                      <span className="dur">v{latest.version || 1}</span>
+                    </span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={{ fontSize: 16, fontWeight: 600 }}>{latest.name}</span>
                       <span className="tiny">{f ? f.name : ''} · {(latest.files || []).length} dosya · {timeAgo(latest.atMs)}</span>
                       <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><span className={st.cls}>{st.label}</span>{list.length > 1 && <span className="pill neutral">{list.length} versiyon</span>}</span>
                     </span>
-                    <Icon name="right" size={18} color="#7C857E" />
+                    <Icon name="right" size={18} color="var(--muted)" />
                   </a>
                   {list.length > 1 && (
                     <div style={{ borderTop: '1px solid var(--line-2)', padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>

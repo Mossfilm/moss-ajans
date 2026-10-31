@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Hero } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Icon, Logo, Switch, back, go } from '../components/ui.jsx';
 import { TYPES, TYPE_ORDER, STAGES, todayYmd } from '../data.js';
@@ -56,6 +57,7 @@ export default function IsForm({ id, q }) {
 
   return (
     <form className="screen no-nav" onSubmit={submit}>
+      <Hero art="clapper" />
       <div className="topbar">
         <button type="button" className="back" onClick={() => back()}>Vazgeç</button>
         <span className="small">Ekibe bildirim düşer</span>

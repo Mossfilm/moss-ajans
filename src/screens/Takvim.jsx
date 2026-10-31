@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Fab, TaskRow, Icon, Logo, useRoute } from '../components/ui.jsx';
+import { Hero } from '../components/Art.jsx';
 import { TYPES, MONTHS, DAYS, ymd, todayYmd, parseYmd, specialDays } from '../data.js';
 
 export default function Takvim() {
@@ -31,6 +32,7 @@ export default function Takvim() {
 
   return (
     <div className="screen">
+      <Hero art="cal" />
       <div className="topbar" style={{ margin: '10px 0 16px' }}>
         <h1 className="h1" style={{ margin: 0 }}>Takvim</h1>
         <button className="btn sm" onClick={() => { const d = parseYmd(t0); setSel(t0); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Bugün</button>

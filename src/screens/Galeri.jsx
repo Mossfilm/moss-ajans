@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Hero, Clapper } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go, useRoute } from '../components/ui.jsx';
 import { PostPreview, VideoPlayer, downloadPost, startDrawing, FORMATS, TEMPLATES } from '../components/Post.jsx';
@@ -10,7 +11,14 @@ const statusPill = (s) => s === 'paylasildi' ? 'pill ok' : s === 'onaylandi' ? '
 const statusLabel = (s) => (STATUS.find(([k]) => k === s) || STATUS[0])[1];
 
 export function GalleryGrid({ items, firms, cols = 2 }) {
-  if (!items.length) return <div className="card empty">Galeride henüz içerik yok.</div>;
+  if (!items.length) return (
+    <div className="card empty illus">
+      <Clapper className="big-art" />
+      <b style={{ fontSize: 16, color: 'var(--ink)' }}>Galeride henüz içerik yok</b>
+      <span style={{ marginTop: 6 }}>İlk postu ya da videoyu asistandan iste.</span>
+      <a className="btn primary" href="#/asistan" style={{ marginTop: 20 }}>Asistandan iste</a>
+    </div>
+  );
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(' + cols + ', minmax(0, 1fr))', gap: 12 }}>
       {items.map((g) => {
@@ -65,6 +73,7 @@ export default function Galeri() {
   const active = firms.filter((f) => f.active !== false);
   return (
     <div className="screen">
+      <Hero art="clapper" />
       <div className="topbar" style={{ marginTop: 12 }}>
         <h1 className="h1" style={{ margin: 0 }}>Galeri</h1>
         <a className="btn sm" href={'#/asistan' + (firm !== 'all' ? '?firma=' + firm : '')} style={{ color: 'var(--moss)' }}><Icon name="sparkle" size={18} />Asistandan iste</a>

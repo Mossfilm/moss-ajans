@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TYPES, shortDate, todayYmd } from '../data.js';
 import { useStore } from '../store.jsx';
+import { TYPE_ART } from './Art.jsx';
 
 // ---- Basit hash yönlendirme ----
 export function useRoute() {
@@ -49,6 +50,9 @@ const P = {
   film: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M7 3v18M17 3v18M3 8h4M3 12h4M3 16h4M17 8h4M17 12h4M17 16h4" /></>,
   upload: <><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></>,
   music: <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6" /><circle cx="17" cy="9" r="2.8" /><path d="M16 14c3 0 5 2 5.5 5.5" /></>,
+  phone: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
   ig: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" /></>
 };
 export function Icon({ name, size = 22, color = 'currentColor', width = 2 }) {
@@ -87,8 +91,10 @@ export function TaskRow({ t, showDate = false }) {
     toggleDone(t);
     if (!t.done) window.dispatchEvent(new CustomEvent('moss-undo', { detail: { ...t, done: true } }));
   };
+  const Art = TYPE_ART[t.type] || TYPE_ART.diger;
   return (
-    <div className={cls}>
+    <div className={cls} style={{ '--tc': (TYPES[t.type] || TYPES.diger).dot }}>
+      <Art className="wm" />
       <button className="check" onClick={onCheck} aria-label={t.done ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}>
         <Check on={t.done} />
       </button>

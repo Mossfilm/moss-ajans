@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Hero } from '../components/Art.jsx';
+const IgGlyph = (p) => <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" strokeWidth="6" aria-hidden="true" {...p}><rect x="20" y="20" width="80" height="80" rx="24" /><circle cx="60" cy="60" r="19" /><circle cx="83" cy="37" r="4" fill="currentColor" /></svg>;
 import { useStore } from '../store.jsx';
 import { Icon, Logo, back } from '../components/ui.jsx';
 import { shortDate } from '../data.js';
@@ -29,8 +31,9 @@ function Spark({ history, width = 318, height = 120 }) {
   return (
     <svg width="100%" viewBox={'0 0 ' + width + ' ' + height} role="img" aria-label={'Takipçi grafiği: ' + shortDate(pts[0].d) + ' ' + fmt(pts[0].f) + ', ' + shortDate(last.d) + ' ' + fmt(last.f)} style={{ display: 'block', overflow: 'visible' }}>
       <line x1="0" x2={width} y1={height - 20} y2={height - 20} stroke="var(--line)" />
-      <path d={area} fill="var(--moss)" opacity="0.08" />
-      <path d={path} fill="none" stroke="var(--moss)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3A8A71" stopOpacity=".28" /><stop offset="1" stopColor="#3A8A71" stopOpacity="0" /></linearGradient></defs>
+      <path d={area} fill="url(#sg)" />
+      <path d={path} fill="none" stroke="var(--moss)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
       <circle cx={X(pts.length - 1)} cy={Y(last.f)} r="4.5" fill="var(--moss)" stroke="var(--surface)" strokeWidth="2" />
       <text x="0" y={height - 4} fontSize="11" fill="var(--muted)" fontFamily="Inter, sans-serif">{shortDate(pts[0].d)}</text>
       <text x={width} y={height - 4} fontSize="11" fill="var(--muted)" fontFamily="Inter, sans-serif" textAnchor="end">{shortDate(last.d)}</text>
@@ -51,6 +54,7 @@ export default function Performans() {
 
   return (
     <div className="screen no-nav">
+      <Hero color="#D6337A" Art={IgGlyph} />
       <button className="back" onClick={() => back('/firmalar')}><Icon name="left" size={20} />Firmalar</button>
       <h1 className="h1" style={{ margin: '8px 0 6px' }}>Instagram performansı</h1>
 
@@ -104,7 +108,7 @@ export default function Performans() {
               <div className="card list">
                 {d.recent.map((m) => (
                   <a key={m.id} href={m.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                    <span className="pill neutral" style={{ width: 64, justifyContent: 'center' }}>{m.type === 'VIDEO' ? 'Reels' : m.type === 'CAROUSEL_ALBUM' ? 'Albüm' : 'Gönderi'}</span>
+                    <span className={'pill ' + (m.type === 'VIDEO' ? 'reels' : 'post')} style={{ width: 64, justifyContent: 'center' }}>{m.type === 'VIDEO' ? 'Reels' : m.type === 'CAROUSEL_ALBUM' ? 'Albüm' : 'Gönderi'}</span>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.caption || 'Açıklamasız paylaşım'}</span>
                       <span className="tiny">{m.at ? shortDate(m.at.slice(0, 10)) : ''} · {fmt(m.likes)} beğeni · {fmt(m.comments)} yorum</span>

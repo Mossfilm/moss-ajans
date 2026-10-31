@@ -3,6 +3,8 @@ import { useStore } from '../store.jsx';
 import { Nav, Fab, Logo, TypePill, Icon } from '../components/ui.jsx';
 import { STAGES, shortDate, todayYmd, ymd, addDays } from '../data.js';
 import { useAsk } from '../components/Dialog.jsx';
+import { Hero, SECTOR_ART, TYPE_ART } from '../components/Art.jsx';
+import { TYPES } from '../data.js';
 
 const HINTS = [
   'Konuşulan fikirler. Uygun görülenler senaryo aşamasına geçer.',
@@ -22,7 +24,8 @@ export default function Uretim() {
 
   return (
     <div className="screen">
-      <h1 className="h1" style={{ marginBottom: 4 }}>Üretim</h1>
+      <Hero />
+      <h1 className="h1" style={{ marginBottom: 4, paddingTop: 20 }}>Üretim</h1>
       <p className="small" style={{ margin: '0 0 16px', fontSize: 13 }}>Aktif {open.length} iş · Bu hafta {open.filter((t) => t.date >= todayYmd() && t.date <= ymd(addDays(new Date(), 6))).length} teslim</p>
 
       <div className="chips">
@@ -40,7 +43,8 @@ export default function Uretim() {
         {items.map((t) => {
           const f = firms.find((x) => x.id === t.firmId);
           return (
-            <div key={t.id} className="card" style={{ overflow: 'hidden' }}>
+            <div key={t.id} className="card prod" style={{ '--tc': (TYPES[t.type] || TYPES.diger).dot }}>
+              {(() => { const A = (f && SECTOR_ART[f.sector]) || TYPE_ART[t.type] || TYPE_ART.diger; return <A className="wm" />; })()}
               <a href={'#/is/' + t.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 14px 10px' }}>
                 <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Logo firm={f} size={22} />{f ? f.name : ''}</span>
                 <span style={{ fontSize: 15, lineHeight: '21px', fontWeight: 600 }}>{t.title}</span>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Hero, Bell } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back } from '../components/ui.jsx';
 import { signOut } from 'firebase/auth';
@@ -10,9 +11,9 @@ import PushSettings from '../components/PushSettings.jsx';
 const KIND = {
   task: { label: 'Yeni iş', icon: 'plus', bg: '#E3EADB', fg: '#2F4A2C' },
   done: { label: 'Tamamlandı', icon: 'check', bg: '#E3EADB', fg: '#2F4A2C' },
-  comment: { label: 'Yorum', icon: 'msg', bg: '#DCE7F3', fg: '#1F4770' },
-  approval: { label: 'Müşteri onayı', icon: 'shield', bg: '#ECE2F2', fg: '#5A2F73' },
-  firm: { label: 'Firma', icon: 'building', bg: '#F6E3CF', fg: '#7A3E0C' },
+  comment: { label: 'Yorum', icon: 'msg', bg: '#E5EFF8', fg: '#28577D' },
+  approval: { label: 'Müşteri onayı', icon: 'shield', bg: '#F8EBCF', fg: '#76531B' },
+  firm: { label: 'Firma', icon: 'building', bg: '#E8E6F6', fg: '#51448F' },
   gallery: { label: 'Galeri', icon: 'star', bg: '#E3EADB', fg: '#2F4A2C' },
   edit: { label: 'Edit', icon: 'film', bg: '#ECE2F2', fg: '#5A2F73' }
 };
@@ -30,19 +31,19 @@ export default function Bildirimler() {
 
   return (
     <div className="screen">
+      <Hero art="bell" />
       <button className="back" onClick={() => back('/')}><Icon name="left" size={20} />Geri</button>
       <h1 className="h1" style={{ marginTop: 6 }}>Bildirimler</h1>
       <div className="stack">
-        {activity.length === 0 && <div className="card empty">Henüz hareket yok. Ekipten biri iş eklediğinde, yorum yazdığında ya da bir işi bitirdiğinde burada görünecek.</div>}
+        {activity.length === 0 && <div className="card empty illus"><Bell className="big-art" /><b style={{ fontSize: 16, color: 'var(--ink)' }}>Henüz hareket yok</b><span style={{ marginTop: 6 }}>Ekipten biri iş eklediğinde, yorum yazdığında ya da bir işi bitirdiğinde burada görünecek.</span></div>}
         {activity.map((a) => {
           const k = KIND[a.kind] || KIND.task;
           const unread = a.atMs > seen && a.by !== user.uid;
           const firm = firms.find((f) => f.id === a.firmId);
           const href = a.projectId ? '#/edit/' + a.projectId : a.taskId ? '#/is/' + a.taskId : a.galleryId ? '#/galeri/' + a.galleryId : a.firmId ? '#/firma/' + a.firmId : '#/';
           return (
-            <a key={a.id} href={href} className="card" style={{ display: 'flex', gap: 12, padding: 14, background: unread ? 'var(--surface)' : 'var(--surface-2)' }}>
-              {firm ? <Logo firm={firm} size={40} radius={12} />
-                : <span aria-hidden="true" style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: k.bg, color: k.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={k.icon} size={20} /></span>}
+            <a key={a.id} href={href} className="card act" style={{ '--ac': k.fg, display: 'flex', gap: 12, padding: '14px 14px 14px 17px', background: unread ? undefined : 'var(--surface-2)' }}>
+              <span aria-hidden="true" style={{ position: 'relative', width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: k.bg, color: k.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={k.icon} size={20} />{firm && <span style={{ position: 'absolute', right: -6, bottom: -6 }}><Logo firm={firm} size={20} radius={6} /></span>}</span>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span className="tiny" style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{k.label} · {a.byName} · {timeAgo(a.atMs)}</span>
                 <span style={{ fontSize: 15, lineHeight: '21px', fontWeight: unread ? 600 : 400 }}>{a.text}</span>

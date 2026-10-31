@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Hero, Camera } from '../components/Art.jsx';
+import { brandOf } from '../components/Post.jsx';
 import { useStore } from '../store.jsx';
 import { Icon, Logo, back } from '../components/ui.jsx';
 import { todayYmd, ymd, addDays, parseYmd, DAYS, MONTHS, upcomingSpecialDays } from '../data.js';
@@ -78,6 +80,7 @@ export default function CekimPlani() {
 
   return (
     <div className="screen no-nav">
+      <Hero art="camera" />
       <button className="back" onClick={() => back('/')}><Icon name="left" size={20} />Geri</button>
       <span className="eyebrow" style={{ display: 'block', marginTop: 8 }}>{today.getDate()} {MONTHS[today.getMonth()]} – {addDays(today, 7).getDate()} {MONTHS[addDays(today, 7).getMonth()]}</span>
       <h1 className="h1" style={{ margin: '6px 0 8px' }}>Haftalık çekim planı</h1>
@@ -90,7 +93,7 @@ export default function CekimPlani() {
           return (
             <div key={r.firm.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) 54px', gap: 10, alignItems: 'center' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, fontWeight: 500 }}><Logo firm={r.firm} size={22} /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.firm.name}</span></span>
-              <div className="bar" style={{ height: 8 }} role="img" aria-label={r.firm.name + ': ' + r.days + ' günlük içerik hazır'}><div style={{ width: Math.min(100, r.days * 10) + '%', background: low ? 'var(--alert)' : 'var(--moss)' }} /></div>
+              <div className="bar" style={{ height: 8 }} role="img" aria-label={r.firm.name + ': ' + r.days + ' günlük içerik hazır'}><div style={{ width: Math.max(4, Math.min(100, r.days * 10)) + '%', background: low ? 'linear-gradient(90deg,#E08A5A,#C4502E)' : r.days < 7 ? 'linear-gradient(90deg,#E8C060,#C99A22)' : 'linear-gradient(90deg,#6FAF8F,#3A8A71)' }} /></div>
               <span style={{ fontSize: 13, fontWeight: 600, textAlign: 'right', color: low ? 'var(--alert-ink)' : 'var(--ink)' }}>{r.days} gün</span>
             </div>
           );
@@ -119,11 +122,14 @@ export default function CekimPlani() {
             {g.items.map((s) => {
               const on = added[s.key];
               return (
-                <div key={s.key} className="card" style={{ overflow: 'hidden', borderColor: on ? 'var(--moss)' : 'var(--line)' }}>
-                  <div style={{ padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div key={s.key} className="card firm" style={{ '--edge': brandOf(s.firm).edge || 'var(--moss)', padding: 0, gap: 0, borderColor: on ? 'var(--moss)' : 'var(--line)' }}>
+                  <div style={{ padding: '14px 14px 12px 17px', display: 'flex', gap: 12 }}>
+                    <span className="thumb" style={{ '--tb': brandOf(s.firm).bg, width: 64, height: 64 }}><Logo firm={s.firm} size={28} radius={8} /><Camera className="thumb-art" /></span>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Logo firm={s.firm} size={22} /><b style={{ color: 'var(--ink)' }}>{s.time}</b> · {s.firm.name}</span>
                     <span style={{ fontSize: 16, fontWeight: 600 }}>{s.title}</span>
                     <span style={{ fontSize: 13, lineHeight: '18px', color: 'var(--ink-2)' }}>{s.why}</span>
+                  </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid var(--line-2)' }}>
                     <button disabled={on} onClick={() => setHidden({ ...hidden, [s.key]: true })} style={{ height: 44, border: 0, borderRight: '1px solid var(--line-2)', background: 'transparent', fontWeight: 600, fontSize: 14, color: 'var(--ink-2)' }}>Bu hafta değil</button>

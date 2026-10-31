@@ -2,18 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 
 // Firma marka renkleri (logolardan alındı). Firma kaydında brand alanı varsa o kullanılır.
 export const BRAND = {
-  'agustos-doner': { bg: '#2A0F0C', fg: '#FFF4E6', accent: '#E8A43A', soft: '#F7E6D3' },
-  'bogazici-junior': { bg: '#3B1F6E', fg: '#FFFFFF', accent: '#F2B21B', soft: '#EFE7FA' },
-  'bogazici-vip': { bg: '#5E2378', fg: '#FFFFFF', accent: '#E0459B', soft: '#F6E8F3' },
-  'bogazici-pancarli': { bg: '#5E2378', fg: '#FFFFFF', accent: '#E0459B', soft: '#F6E8F3' },
-  'dsg-otomotiv': { bg: '#0B1A33', fg: '#FFFFFF', accent: '#2E7BFF', soft: '#E3ECFB' },
-  'mutlu-cocuklar': { bg: '#F39A1E', fg: '#FFFFFF', accent: '#6D3A9C', soft: '#FFF0DA' },
-  'net-vip-akademi': { bg: '#0F1F3D', fg: '#FFFFFF', accent: '#D9AE3A', soft: '#F4EBD3' },
-  'ekici-sanat': { bg: '#161616', fg: '#FFFFFF', accent: '#C9C2B4', soft: '#EFEDE8' },
-  'son-ders': { bg: '#1B2A5C', fg: '#FFFFFF', accent: '#4FA3E0', soft: '#E4EAF6' },
-  'kristal-kedi': { bg: '#0B4FD8', fg: '#FFFFFF', accent: '#8FE3F5', soft: '#E1F3FB' }
+  'agustos-doner': { edge: '#E8A43A', bg: '#2A0F0C', fg: '#FFF4E6', accent: '#E8A43A', soft: '#F7E6D3' },
+  'bogazici-junior': { edge: '#E9A80E', bg: '#3B1F6E', fg: '#FFFFFF', accent: '#F2B21B', soft: '#EFE7FA' },
+  'bogazici-vip': { edge: '#8B5CC7', bg: '#5E2378', fg: '#FFFFFF', accent: '#E0459B', soft: '#F6E8F3' },
+  'bogazici-pancarli': { edge: '#E0459B', bg: '#5E2378', fg: '#FFFFFF', accent: '#E0459B', soft: '#F6E8F3' },
+  'dsg-otomotiv': { edge: '#2E7BFF', bg: '#0B1A33', fg: '#FFFFFF', accent: '#2E7BFF', soft: '#E3ECFB' },
+  'mutlu-cocuklar': { edge: '#F39A1E', bg: '#F39A1E', fg: '#FFFFFF', accent: '#6D3A9C', soft: '#FFF0DA' },
+  'net-vip-akademi': { edge: '#C99A22', bg: '#0F1F3D', fg: '#FFFFFF', accent: '#D9AE3A', soft: '#F4EBD3' },
+  'ekici-sanat': { edge: '#8A8478', bg: '#161616', fg: '#FFFFFF', accent: '#C9C2B4', soft: '#EFEDE8' },
+  'son-ders': { edge: '#4FA3E0', bg: '#1B2A5C', fg: '#FFFFFF', accent: '#4FA3E0', soft: '#E4EAF6' },
+  'kristal-kedi': { edge: '#5B8DEF', bg: '#0B4FD8', fg: '#FFFFFF', accent: '#8FE3F5', soft: '#E1F3FB' }
 };
-const FALLBACK = { bg: '#2F4A2C', fg: '#FFFFFF', accent: '#F2C14E', soft: '#E3EADB' };
+const FALLBACK = { edge: '#4E6E48', bg: '#2F4A2C', fg: '#FFFFFF', accent: '#F2C14E', soft: '#E3EADB' };
 export const brandOf = (firm) => (firm && (firm.brand && typeof firm.brand === 'object' ? firm.brand : BRAND[firm.id])) || FALLBACK;
 
 export const FORMATS = {
