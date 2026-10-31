@@ -109,7 +109,7 @@ export default function Asistan() {
         <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--moss)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" color="#fff" /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>MOSS Asistan<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, color: 'var(--moss)' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: busy ? 'var(--wait)' : '#3A8A71' }} />{busy ? 'Yazıyor' : 'Hazır'}</span></h1>
-          {open.length > 0 && <button className="link" onClick={() => setShowJobs(!showJobs)} style={{ fontSize: 12 }}>Claude sırasında {open.length} iş {showJobs ? '▴' : '▾'}</button>}
+          {open.length > 0 && <button className="link" onClick={() => setShowJobs(!showJobs)} style={{ fontSize: 12, display: 'block', margin: '2px 0' }}>Claude sırasında {open.length} iş {showJobs ? '▴' : '▾'}</button>}
           <span className="tiny">{focusFirm ? 'Konu: ' + focusFirm.name + (focusItem ? ' · ' + focusItem.title : '') : 'Firmalar, takvim ve galeri hakkında sor ya da iste'}</span>
         </div>
         {msgs.length > 0 && <button className="link" onClick={() => clearChat()}>Temizle</button>}
