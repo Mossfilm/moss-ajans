@@ -13,6 +13,7 @@ const IG = {
 };
 (async () => {
   await createUserWithEmailAndPassword({}, 'hello@mossfilmagency.com', 'onizleme');
+  await setDoc(doc({}, 'config', 'app'), { geminiKey: 'onizleme' });
   for (const [id, [u, f, s]] of Object.entries(IG)) {
     const history = hist(f - 30 * s, s);
     await setDoc(doc({}, 'insta', id), { username: u, followers: history[29].f, mediaCount: 240, updated: day(0), error: '', history,

@@ -52,7 +52,7 @@ export default function Login() {
 
   return (
     <div className="center-screen">
-      <img src="/icons/icon-192.png" alt="" width="64" height="64" style={{ borderRadius: 18 }} />
+      <img src={import.meta.env.BASE_URL + "icons/icon-192.png"} alt="" width="64" height="64" style={{ borderRadius: 18 }} />
       <h1 className="h1" style={{ marginTop: 20 }}>Moss Ajans</h1>
       <p className="small" style={{ margin: '-8px 0 20px' }}>Ekip iş takip uygulaması</p>
       <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 18 }}>

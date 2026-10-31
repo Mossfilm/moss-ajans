@@ -43,6 +43,7 @@ export function StoreProvider({ children }) {
   const [pushSub, setPushSub] = useState(null);
   const [chat, setChat] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [config, setConfig] = useState({});
 
   useEffect(() => onAuthStateChanged(auth, (u) => setUser(u || null)), []);
 
@@ -96,6 +97,8 @@ export function StoreProvider({ children }) {
     unsubs.push(onSnapshot(query(collection(db, 'chat'), orderBy('at', 'desc'), limit(80)), (snap) => {
       setChat(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).reverse());
     }));
+    unsubs.push(onSnapshot(doc(db, 'config', 'app'), (s) => setConfig((c) => ({ ...c, ...(s.exists() ? s.data() : {}) }))));
+    unsubs.push(onSnapshot(doc(db, 'config', 'push'), (s) => setConfig((c) => ({ ...c, vapidPublic: s.exists() ? s.data().vapidPublic : '' }))));
     unsubs.push(onSnapshot(collection(db, 'jobs'), (snap) => {
       setJobs(snap.docs.map((d) => ({ id: d.id, ...d.data(), atMs: ms(d.data().at) || Date.now() })).sort((a, b) => b.atMs - a.atMs));
     }));
@@ -212,6 +215,7 @@ export function StoreProvider({ children }) {
         return ref.id;
       },
       cancelJob: (id) => deleteDoc(doc(db, 'jobs', id)),
+      saveConfig: (patch) => setDoc(doc(db, 'config', 'app'), patch, { merge: true }),
       queueProject: async (p, patch = {}) => {
         await updateDoc(doc(db, 'projects', p.id), { ...patch, status: 'sirada', workerNote: '', queuedAt: serverTimestamp() });
         await addDoc(collection(db, 'jobs'), { kind: 'video', status: 'bekliyor', projectId: p.id, firmId: p.firmId, text: (patch.brief ?? p.brief) || '', by: user.uid, byName: me().name, at: serverTimestamp() });
@@ -229,7 +233,7 @@ export function StoreProvider({ children }) {
     };
   }, [user, profile, firms]);
 
-  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, insta, pushSub, chat, jobs, ready, ...api };
+  const value = { user, profile, profileLoaded, firms, tasks, users, activity, gallery, projects, insta, pushSub, chat, jobs, config, ready, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

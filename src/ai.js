@@ -1,13 +1,6 @@
-// Moss Asistan (ücretsiz): anlık cevaplar Google Gemini'nin ücretsiz katmanından gelir.
-// Montaj ve özel tasarım gibi ağır işler "jobs" sırasına alınır; Claude saatte bir uyanıp yapar.
-// Ortam değişkenleri (Netlify → Site configuration → Environment variables):
-//   GEMINI_API_KEY   : Google AI Studio'dan alınan ücretsiz anahtar (kart gerekmez)
-//   FIREBASE_API_KEY : src/firebase-config.js içindeki apiKey (giriş doğrulaması için)
-//   ALLOWED_EMAILS   : virgülle ayrılmış ekip e-postaları
-// İsteğe bağlı: GEMINI_MODEL (varsayılan gemini-flash-latest)
-import { verify } from './lib/auth.mjs';
-
-const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+// Anlık asistan: Google Gemini'nin ücretsiz katmanını doğrudan uygulamadan çağırır (sunucu gerekmez).
+// Anahtar uygulamanın korumalı veritabanında durur (config/app.geminiKey); yalnızca ekip okuyabilir.
+// Montaj ve özel tasarım gibi ağır işler "jobs" sırasına alınır; Claude saatte bir yapar.
 
 const S = (description, extra = {}) => ({ type: 'string', description, ...extra });
 const TOOLS = [
@@ -112,50 +105,39 @@ function system(ctx) {
   ].filter(Boolean).join('\n');
 }
 
-async function gemini(body) {
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY), {
+
+export class QuotaError extends Error {}
+
+async function call(key, model, body) {
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
   });
   const j = await r.json().catch(() => ({}));
-  if (r.status === 429) { const e = new Error('quota'); e.quota = true; throw e; }
+  if (r.status === 429) throw new QuotaError('quota');
   if (!r.ok) throw new Error((j.error && j.error.message) || 'Gemini hatası ' + r.status);
   return j;
 }
 
-export default async (req) => {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  if (!process.env.GEMINI_API_KEY) return Response.json({ error: 'not_configured' }, { status: 503 });
-  const email = await verify((req.headers.get('authorization') || '').replace(/^Bearer /, ''));
-  if (!email) return Response.json({ error: 'unauthorized' }, { status: 401 });
-
-  let input;
-  try { input = await req.json(); } catch (e) { return Response.json({ error: 'bad_request' }, { status: 400 }); }
-  let contents = (input.messages || []).slice(-20)
+export async function askGemini({ key, model = 'gemini-flash-latest', messages, context }) {
+  let contents = (messages || []).slice(-20)
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(m.text || '') }] }))
     .filter((m) => m.parts[0].text);
   while (contents.length && contents[0].role !== 'user') contents.shift();
-  if (!contents.length) return Response.json({ error: 'bad_request' }, { status: 400 });
-
-  const base = { system_instruction: { parts: [{ text: system(input.context || {}) }] }, tools: [{ functionDeclarations: TOOLS }], generationConfig: { temperature: 0.7 } };
+  const base = { system_instruction: { parts: [{ text: system(context || {}) }] }, tools: [{ functionDeclarations: TOOLS }], generationConfig: { temperature: 0.7 } };
   const actions = [];
   let reply = '';
-  try {
-    for (let round = 0; round < 3; round++) {
-      const res = await gemini({ ...base, contents });
-      const parts = (((res.candidates || [])[0] || {}).content || {}).parts || [];
-      const text = parts.filter((p) => p.text).map((p) => p.text).join('\n').trim();
-      const calls = parts.filter((p) => p.functionCall).map((p) => p.functionCall);
-      if (text) reply = text;
-      if (!calls.length) break;
-      calls.forEach((c) => actions.push({ ...(c.args || {}), action: c.name }));
-      contents = contents.concat(
-        { role: 'model', parts: calls.map((c) => ({ functionCall: c })) },
-        { role: 'user', parts: calls.map((c) => ({ functionResponse: { name: c.name, response: { result: c.name === 'queue_for_claude' ? 'Claude sırasına eklendi, en geç ~1 saat' : 'Tamamlandı, uygulamaya eklendi' } } })) }
-      );
-    }
-  } catch (e) {
-    if (e.quota) return Response.json({ error: 'quota' }, { status: 429 });
-    return Response.json({ error: 'api', message: e.message }, { status: 502 });
+  for (let round = 0; round < 3; round++) {
+    const res = await call(key, model, { ...base, contents });
+    const parts = (((res.candidates || [])[0] || {}).content || {}).parts || [];
+    const text = parts.filter((p) => p.text).map((p) => p.text).join('\n').trim();
+    const calls = parts.filter((p) => p.functionCall).map((p) => p.functionCall);
+    if (text) reply = text;
+    if (!calls.length) break;
+    calls.forEach((c) => actions.push({ ...(c.args || {}), action: c.name }));
+    contents = contents.concat(
+      { role: 'model', parts: calls.map((c) => ({ functionCall: c })) },
+      { role: 'user', parts: calls.map((c) => ({ functionResponse: { name: c.name, response: { result: c.name === 'queue_for_claude' ? 'Claude sırasına eklendi, en geç ~1 saat' : 'Tamamlandı, uygulamaya eklendi' } } })) }
+    );
   }
-  return Response.json({ reply: reply || 'Tamam.', actions, via: 'gemini' });
-};
+  return { reply: reply || 'Tamam.', actions, via: 'gemini' };
+}

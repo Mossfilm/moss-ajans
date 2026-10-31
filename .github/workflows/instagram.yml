@@ -1,0 +1,20 @@
+# Her gün 06:15 (İstanbul) Instagram takipçi sayıları. Gizli değişkenler: FIREBASE_SERVICE_ACCOUNT, META_ACCESS_TOKEN, META_IG_USER_ID
+name: Instagram sayaçları
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/instagram.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_IG_USER_ID: ${{ secrets.META_IG_USER_ID }}

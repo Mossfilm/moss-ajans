@@ -3,6 +3,9 @@ import { TYPES, shortDate, todayYmd } from '../data.js';
 import { useStore } from '../store.jsx';
 import { TYPE_ART } from './Art.jsx';
 
+// GitHub Pages alt klasöründe (/moss-ajans/) da çalışsın diye kök yollara taban adresi eklenir
+export const asset = (p) => (p && p.startsWith('/') && !p.startsWith('//') ? import.meta.env.BASE_URL + p.slice(1) : p);
+
 // ---- Basit hash yönlendirme ----
 export function useRoute() {
   const get = () => {
@@ -65,7 +68,7 @@ export function Icon({ name, size = 22, color = 'currentColor', width = 2 }) {
 
 export function Logo({ firm, size = 22, radius = 6 }) {
   if (firm && firm.logo) {
-    return <img className="logo" src={firm.logo} alt="" width={size} height={size} style={{ width: size, height: size, borderRadius: radius }} />;
+    return <img className="logo" src={asset(firm.logo)} alt="" width={size} height={size} style={{ width: size, height: size, borderRadius: radius }} />;
   }
   const initials = ((firm && firm.name) || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toLocaleUpperCase('tr');
   return <span className="logo-fallback" aria-hidden="true" style={{ width: size, height: size, borderRadius: radius, fontSize: Math.max(10, size * 0.36) }}>{initials}</span>;

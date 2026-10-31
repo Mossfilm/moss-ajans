@@ -1,5 +1,5 @@
-// Saatlik zamanlanmış görev: telefona hatırlatma bildirimleri gönderir.
-// Ortam değişkenleri: FIREBASE_SERVICE_ACCOUNT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+// Saatlik zamanlanmış görev (GitHub Actions): telefona hatırlatma bildirimleri gönderir.
+// Gizli değişken: FIREBASE_SERVICE_ACCOUNT. Bildirim anahtarları (VAPID) ilk çalışmada üretilip veritabanına yazılır.
 // Kurallar (İstanbul saati):
 //   08:00  sabah özeti, çekim sabahı hazırlık (eksik kontrol listesi), pazartesi haftalık çekim planı
 //   09:00  özel güne 21 / 7 gün kala hatırlatma
@@ -7,10 +7,8 @@
 //   her saat  “Yaptın mı?”: saati 30+ dk geçmiş, yapılmamış bugünkü işler
 //   22:00–08:00 arası bildirim gönderilmez
 import webpush from 'web-push';
-import { adminReady, list, set, remove, istanbulNow } from './lib/admin.mjs';
-import { specialDays } from '../../src/data.js';
-
-export const config = { schedule: '5 * * * *' };
+import { adminReady, list, get, set, remove, istanbulNow } from './lib/admin.mjs';
+import { specialDays } from '../src/data.js';
 
 const TYPE = { cekim: 'Çekim', gonderi: 'Gönderi', reels: 'Reels', hikaye: 'Hikâye', kurgu: 'Kurgu', tasarim: 'Tasarım', reklam: 'Reklam', toplanti: 'Toplantı', rapor: 'Rapor', diger: 'İş' };
 const addDays = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
@@ -64,9 +62,23 @@ export function plan({ now, subs, tasks, firms, sent }) {
   return out;
 }
 
-export default async () => {
-  if (!adminReady() || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return new Response('not configured');
-  webpush.setVapidDetails('mailto:hello@mossfilmagency.com', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+async function vapid() {
+  let pub = await get('config/push');
+  let sec = await get('config/pushSecret');
+  if (!pub || !pub.vapidPublic || !sec || !sec.vapidPrivate) {
+    const k = webpush.generateVAPIDKeys();
+    await set('config/push', { vapidPublic: k.publicKey });
+    await set('config/pushSecret', { vapidPrivate: k.privateKey });
+    pub = { vapidPublic: k.publicKey }; sec = { vapidPrivate: k.privateKey };
+    console.log('Bildirim anahtarları üretildi.');
+  }
+  return { pub: pub.vapidPublic, priv: sec.vapidPrivate };
+}
+
+async function main() {
+  if (!adminReady()) { console.log('FIREBASE_SERVICE_ACCOUNT yok, atlandı.'); return; }
+  const k = await vapid();
+  webpush.setVapidDetails('mailto:hello@mossfilmagency.com', k.pub, k.priv);
   const now = istanbulNow();
   const [subs, tasks, firms, log] = await Promise.all([list('pushSubs'), list('tasks'), list('firms'), list('pushLog')]);
   const sent = new Set(log.map((l) => l.id));
@@ -79,8 +91,9 @@ export default async () => {
       if (e.statusCode === 404 || e.statusCode === 410) await remove('pushSubs/' + j.sub.id);
     }
   }
-  // 14 günden eski kayıtları temizle
   const old = Date.now() - 14 * 86400000;
   await Promise.all(log.filter((l) => l.at && l.at < old).map((l) => remove('pushLog/' + l.id)));
-  return new Response('sent ' + jobs.length);
-};
+  console.log('Gönderilen bildirim: ' + jobs.length);
+}
+
+if (process.argv[1] && process.argv[1].endsWith('hatirlatma.mjs')) main().catch((e) => { console.error(e); process.exit(1); });

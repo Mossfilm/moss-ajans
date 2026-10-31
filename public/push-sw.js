@@ -4,8 +4,8 @@ self.addEventListener('push', (event) => {
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: 'Moss Ajans', body: event.data ? event.data.text() : '' }; }
   event.waitUntil(self.registration.showNotification(d.title || 'Moss Ajans', {
     body: d.body || '',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: self.registration.scope + 'icons/icon-192.png',
+    badge: self.registration.scope + 'icons/icon-192.png',
     data: { url: d.url || '/' },
     tag: d.tag || undefined
   }));
@@ -13,7 +13,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = '/#' + ((event.notification.data && event.notification.data.url) || '/');
+  const target = self.registration.scope + '#' + ((event.notification.data && event.notification.data.url) || '/');
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of all) {

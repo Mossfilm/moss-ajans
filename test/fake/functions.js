@@ -34,9 +34,23 @@ export function installFakeFunctions(db) {
   window.__fnCalls = [];
   window.fetch = async (url, opts = {}) => {
     const u = String(url);
+    let name, body;
+    if (u.includes('generativelanguage.googleapis.com')) {
+      // Gemini isteğini eski sahte asistan biçimine çevir, cevabı Gemini biçiminde döndür
+      const g = opts.body ? JSON.parse(opts.body) : {};
+      const lastC = (g.contents || []).slice(-1)[0] || { parts: [] };
+      if (lastC.parts.some((p) => p.functionResponse)) return Response.json({ candidates: [{ content: { role: 'model', parts: [{ text: '' }] } }] });
+      const sys = (g.system_instruction && g.system_instruction.parts[0].text) || '';
+      const fm = sys.match(/Firmalar: (\[.*\])/); const tm = sys.match(/Bugünün tarihi: (\S+)/);
+      const msgs = (g.contents || []).map((c) => ({ role: c.role === 'model' ? 'assistant' : 'user', text: (c.parts[0] || {}).text || '' }));
+      const res = await window.fetch('/.netlify/functions/asistan', { method: 'POST', body: JSON.stringify({ messages: msgs, context: { firms: fm ? JSON.parse(fm[1]) : [], today: tm ? tm[1] : '' } }) });
+      if (res.status !== 200) return new Response(await res.text(), { status: res.status });
+      const j = await res.json();
+      return Response.json({ candidates: [{ content: { role: 'model', parts: [{ text: j.reply }].concat((j.actions || []).map(({ action, ...args }) => ({ functionCall: { name: action, args } }))) } }] });
+    }
     if (!u.startsWith('/.netlify/functions/')) return real(url, opts);
-    const name = u.split('/').pop().split('?')[0];
-    const body = opts.body ? JSON.parse(opts.body) : {};
+    name = u.split('/').pop().split('?')[0];
+    body = opts.body ? JSON.parse(opts.body) : {};
     window.__fnCalls.push({ name, body });
     await new Promise((r) => setTimeout(r, 250));
     if (name === 'asistan') {

@@ -1,10 +1,9 @@
-// Günlük zamanlanmış görev: firmaların Instagram takipçi ve son paylaşım sayılarını Meta'dan çeker.
+// Günlük zamanlanmış görev (GitHub Actions): firmaların Instagram takipçi ve son paylaşım sayılarını Meta'dan çeker.
 // Meta "Business Discovery": yalnızca işletme / içerik üreticisi hesaplarının herkese açık sayıları gelir.
 // Ortam değişkenleri: FIREBASE_SERVICE_ACCOUNT, META_ACCESS_TOKEN (uzun ömürlü), META_IG_USER_ID (Moss'un IG işletme hesabı kimliği)
 // İsteğe bağlı: META_GRAPH_VERSION (varsayılan v23.0)
 import { adminReady, list, get, set, istanbulNow } from './lib/admin.mjs';
 
-export const config = { schedule: '15 3 * * *' }; // her gün 06:15 (İstanbul)
 
 const V = process.env.META_GRAPH_VERSION || 'v23.0';
 export const usernameOf = (url) => {
@@ -21,8 +20,8 @@ async function discover(username) {
   return j.business_discovery;
 }
 
-export default async () => {
-  if (!adminReady() || !process.env.META_ACCESS_TOKEN || !process.env.META_IG_USER_ID) return new Response('not configured');
+async function main() {
+  if (!adminReady() || !process.env.META_ACCESS_TOKEN || !process.env.META_IG_USER_ID) { console.log('Meta bağlantısı ayarlı değil, atlandı.'); return; }
   const today = istanbulNow().ymd;
   const firms = (await list('firms')).filter((f) => f.active !== false && usernameOf(f.instagram));
   let ok = 0;
@@ -41,5 +40,7 @@ export default async () => {
       await set('insta/' + f.id, { ...prev, error: String(e.message || e).slice(0, 200), errorAt: today });
     }
   }
-  return new Response('ok ' + ok + '/' + firms.length);
-};
+  console.log('Güncellenen firma: ' + ok + '/' + firms.length);
+}
+
+if (process.argv[1] && process.argv[1].endsWith('instagram.mjs')) main().catch((e) => { console.error(e); process.exit(1); });

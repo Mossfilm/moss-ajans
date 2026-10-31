@@ -18,7 +18,7 @@ function b64ToUint8(b64) {
 }
 
 export default function PushSettings() {
-  const { pushSub, savePush, removePush } = useStore();
+  const { pushSub, savePush, removePush, config } = useStore();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const supported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -30,9 +30,8 @@ export default function PushSettings() {
   const enable = async () => {
     setMsg(''); setBusy(true);
     try {
-      const r = await fetch('/.netlify/functions/push-anahtar');
-      if (!r.ok) { setMsg('Telefon bildirimleri sunucuda henüz açılmadı. Kurulum tamamlanınca bu düğme çalışacak.'); setBusy(false); return; }
-      const { key } = await r.json();
+      const key = config.vapidPublic;
+      if (!key) { setMsg('Telefon bildirimleri sunucuda henüz açılmadı. Kurulum tamamlanınca bu düğme çalışacak.'); setBusy(false); return; }
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') { setMsg('Bildirim izni verilmedi. Telefonun ayarlarından Moss için bildirimlere izin verebilirsin.'); setBusy(false); return; }
       const reg = await navigator.serviceWorker.ready;

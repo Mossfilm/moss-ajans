@@ -4,7 +4,7 @@ import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
 import { PostPreview } from '../components/Post.jsx';
 import { todayYmd, ymd, addDays, upcomingSpecialDays, TYPES } from '../data.js';
-import { auth } from '../firebase.js';
+import { askGemini, QuotaError } from '../ai.js';
 
 const JOB_LABEL = { soru: 'Soru', post: 'Özel tasarım', video: 'Montaj', diger: 'İş' };
 const JOB_STATUS = { bekliyor: ['Sırada', 'pill wait'], isleniyor: ['Claude yapıyor', 'pill ok'], tamam: ['Bitti', 'pill ok'], hata: ['Yapılamadı', 'pill alert'] };
@@ -16,7 +16,7 @@ const CHIPS = [
 ];
 
 export default function Asistan() {
-  const { firms, tasks, gallery, addGallery, addTask, chat, jobs, addChat, addJob, clearChat, cancelJob, user } = useStore();
+  const { firms, tasks, gallery, addGallery, addTask, chat, jobs, addChat, addJob, clearChat, cancelJob, user, config } = useStore();
   const r = useRoute();
   const focusFirmId = r.q.get('firma');
   const focusItemId = r.q.get('galeri');
@@ -81,23 +81,14 @@ export default function Asistan() {
     setDraft(''); setBusy(true);
     await addChat({ role: 'user', text: q });
     try {
-      const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
-      const res = await fetch('/.netlify/functions/asistan', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, text: m.text })), context: context() })
-      });
-      if (res.status === 404 || res.status === 503) await toQueue(q, 'Anlık asistan henüz bağlı değil.');
-      else if (res.status === 429) await toQueue(q, 'Anlık asistanın bugünkü ücretsiz kotası doldu.');
-      else if (res.status === 401) await addChat({ role: 'assistant', via: 'sistem', text: 'Bu hesabın asistanı kullanma izni yok.' });
-      else if (!res.ok) await toQueue(q, 'Anlık asistan şu an cevap veremedi.');
+      if (!config.geminiKey) await toQueue(q, 'Anlık asistan henüz bağlı değil.');
       else {
-        const j = await res.json();
+        const j = await askGemini({ key: config.geminiKey, model: config.geminiModel || 'gemini-flash-latest', messages: next.map((m) => ({ role: m.role, text: m.text })), context: context() });
         const done = await apply(j.actions || []);
-        await addChat({ role: 'assistant', via: j.via || 'gemini', text: j.reply, done });
+        await addChat({ role: 'assistant', via: 'gemini', text: j.reply, done });
       }
     } catch (e) {
-      await toQueue(q, 'Anlık asistana ulaşılamadı.');
+      await toQueue(q, e instanceof QuotaError ? 'Anlık asistanın bugünkü ücretsiz kotası doldu.' : 'Anlık asistan şu an cevap veremedi.');
     }
     setBusy(false);
   };

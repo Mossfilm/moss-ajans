@@ -19,7 +19,9 @@ const KIND = {
 };
 
 export default function Bildirimler() {
-  const { activity, user, firms, tasks, deleteSamples, profile } = useStore();
+  const { activity, user, firms, tasks, deleteSamples, profile, config, saveConfig } = useStore();
+  const [gk, setGk] = useState('');
+  const [gMsg, setGMsg] = useState('');
   const samples = tasks.filter((t) => t.sample).length;
   const ask = useAsk();
   const key = 'moss-seen-' + user.uid;
@@ -55,6 +57,22 @@ export default function Bildirimler() {
       </div>
 
       <PushSettings />
+      <h2 className="h2" style={{ marginTop: 28 }}>Anlık asistan</h2>
+      <div className="card pad stack" style={{ gap: 10 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className={config.geminiKey ? 'pill ok' : 'pill wait'}>{config.geminiKey ? 'Bağlı' : 'Bağlı değil'}</span>
+          <span className="tiny">{config.geminiKey ? 'Sohbet ve şablonlu işler anında cevaplanıyor.' : 'Şu an sorular Claude’un saatlik sırasına düşüyor.'}</span>
+        </span>
+        <span className="small" style={{ fontSize: 13 }}>Ücretsiz Gemini anahtarı: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--moss)', fontWeight: 600 }}>aistudio.google.com/apikey</a> → “Create API key” (kart gerekmez). Anahtarı kopyalayıp buraya yapıştır; yalnızca ekip görebilir.</span>
+        <form style={{ display: 'flex', gap: 8 }} onSubmit={async (e) => { e.preventDefault(); if (!gk.trim()) return; await saveConfig({ geminiKey: gk.trim() }); setGk(''); setGMsg('Kaydedildi. Asistan artık anında cevap verir.'); }}>
+          <label htmlFor="gk" className="sr">Gemini anahtarı</label>
+          <input id="gk" className="input" type="password" autoComplete="off" value={gk} onChange={(e) => setGk(e.target.value)} placeholder={config.geminiKey ? 'Yeni anahtarla değiştir' : 'Anahtarı yapıştır'} />
+          <button className="btn primary" type="submit" style={{ flexShrink: 0 }}>Kaydet</button>
+        </form>
+        {config.geminiKey && <button className="link" style={{ alignSelf: 'flex-start' }} onClick={() => saveConfig({ geminiKey: '' })}>Anahtarı kaldır</button>}
+        {gMsg && <span className="small" role="status">{gMsg}</span>}
+      </div>
+
       <h2 className="h2" style={{ marginTop: 28 }}>Hesap</h2>
       <div className="card list">
         {samples > 0 && (

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { asset } from './ui.jsx';
 
 // Firma marka renkleri (logolardan alındı). Firma kaydında brand alanı varsa o kullanılır.
 export const BRAND = {
@@ -36,7 +37,7 @@ const BODY = 'Inter, system-ui, sans-serif';
 
 function LogoTile({ firm, size, ring }) {
   if (!firm || !firm.logo) return null;
-  return <img src={firm.logo} alt="" crossOrigin="anonymous" style={{ width: size, height: size, borderRadius: size * 0.2, objectFit: 'cover', border: ring ? '4px solid ' + ring : 0, display: 'block' }} />;
+  return <img src={asset(firm.logo)} alt="" crossOrigin="anonymous" style={{ width: size, height: size, borderRadius: size * 0.2, objectFit: 'cover', border: ring ? '4px solid ' + ring : 0, display: 'block' }} />;
 }
 
 // Tek bir gönderinin 1080 genişliğindeki tam boy tasarımı
