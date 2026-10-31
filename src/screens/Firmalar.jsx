@@ -36,7 +36,7 @@ export default function Firmalar() {
 
   return (
     <div className="screen">
-      <div className="topbar" style={{ marginTop: 12 }}>
+      <div className="topbar" style={{ marginTop: 10 }}>
         <h1 className="h1" style={{ margin: 0 }}>Firmalar</h1>
         <button className="btn sm" onClick={() => setAdding(!adding)} style={{ color: 'var(--moss)' }}><Icon name="plus" size={18} />Firma ekle</button>
       </div>
@@ -59,39 +59,46 @@ export default function Firmalar() {
 
       <div style={{ position: 'relative', margin: '16px 0 12px' }}>
         <label htmlFor="ara" className="sr">Firma ara</label>
-        <span style={{ position: 'absolute', left: 14, top: 13 }}><Icon name="search" size={20} color="#5F6962" /></span>
-        <input id="ara" className="input" type="search" placeholder="Firma ara" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 44 }} />
+        <span style={{ position: 'absolute', left: 14, top: 15 }}><Icon name="search" size={20} color="var(--muted)" /></span>
+        <input id="ara" className="input" type="search" placeholder="Firma ara…" value={q} onChange={(e) => setQ(e.target.value)} style={{ paddingLeft: 44 }} />
       </div>
       <div className="chips">
         {usedSectors.map((s) => <button key={s} className="chip" aria-pressed={sec === s} onClick={() => setSec(s)}>{s}</button>)}
       </div>
-      <p className="small" style={{ margin: '12px 0' }}>{list.length ? list.length + ' firma' : 'Eşleşen firma yok'}</p>
+      <p className="small" style={{ margin: '12px 0' }}>{list.length ? list.length + ' firma · ' + list.filter((f) => f.active !== false).length + ' aktif · ' + list.filter((f) => f.active === false).length + ' pasif' : 'Aramana uygun firma bulunamadı'}</p>
 
       <div className="stack">
         {list.map((f) => {
           const inactive = f.active === false;
           const next = tasks.filter((t) => t.firmId === f.id && !t.done && t.date >= t0).sort((a, b) => ((a.date + (a.time || '')) < (b.date + (b.time || '')) ? -1 : 1))[0];
-          const waiting = tasks.some((t) => t.firmId === f.id && t.stage === 4 && !t.done);
+          const waiting = tasks.filter((t) => t.firmId === f.id && t.stage === 4 && !t.done).length;
           const pr = packageProgress(f, tasks);
           return (
-            <a key={f.id} href={'#/firma/' + f.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 14, opacity: inactive ? 0.75 : 1 }}>
+            <a key={f.id} href={'#/firma/' + f.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, background: inactive ? '#F0F1EE' : undefined }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Logo firm={f} size={52} radius={14} />
+                <Logo firm={f} size={56} radius={14} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <span style={{ fontSize: 16, fontWeight: 600 }}>{f.name}</span>
-                  <span className="small" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {f.sector} · {inactive ? 'Sayfa aktif değil' : next ? 'Sıradaki: ' + shortDate(next.date) + ' · ' + (TYPES[next.type] || TYPES.diger).label : 'Planlı iş yok'}
-                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: inactive ? 'var(--ink-2)' : 'var(--ink)' }}>{f.name}</span>
+                  <span className="tiny">{f.sector}</span>
                 </div>
-                {waiting && <span className="pill alert">Onay bekliyor</span>}
+                <Icon name="right" size={18} color="var(--muted)" />
               </div>
-              {inactive ? <span className="pill neutral" style={{ alignSelf: 'flex-start' }}>Sayfa aktif değil</span>
-                : pr.total > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div className="tiny" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-2)' }}><span>Bu ayın paketi</span><b style={{ color: 'var(--ink)' }}>{pr.done}/{pr.total} içerik</b></div>
-                    <div className="bar" role="img" aria-label={'Bu ay ' + pr.total + ' içerikten ' + pr.done + ' tanesi tamamlandı'}><div style={{ width: Math.min(100, Math.round(pr.done / pr.total * 100)) + '%' }} /></div>
-                  </div>
-                )}
+              {inactive ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span className="pill neutral">Pasif</span><span className="tiny">Sayfa aktif değil</span></div>
+              ) : (
+                <>
+                  <span className="small" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 13 }}>
+                    {next ? <>Sıradaki iş: <b style={{ color: 'var(--ink)', fontWeight: 600 }}>{next.title}</b> · {shortDate(next.date)}</> : 'Planlı iş yok'}
+                  </span>
+                  {pr.total > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="tiny" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-2)' }}><span>Aylık paket</span><b style={{ color: pr.done > pr.total ? 'var(--alert)' : 'var(--ink)' }}>{pr.done}/{pr.total} içerik{pr.done > pr.total ? ' · Paket aşıldı' : ''}</b></div>
+                      <div className="bar" style={{ background: 'var(--moss-soft)' }} role="img" aria-label={'Bu ay ' + pr.total + ' içerikten ' + pr.done + ' tanesi tamamlandı'}><div style={{ width: Math.min(100, Math.round(pr.done / pr.total * 100)) + '%' }} /></div>
+                    </div>
+                  )}
+                  {waiting > 0 && <span className="pill wait" style={{ alignSelf: 'flex-start' }}>Onay bekliyor · {waiting}</span>}
+                </>
+              )}
             </a>
           );
         })}

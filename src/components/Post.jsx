@@ -31,7 +31,7 @@ export const TEMPLATES = {
   alinti: 'Alıntı / söz'
 };
 
-const DISPLAY = "'Bricolage Grotesque', Inter, system-ui, sans-serif";
+const DISPLAY = "'Manrope', Inter, system-ui, sans-serif";
 const BODY = 'Inter, system-ui, sans-serif';
 
 function LogoTile({ firm, size, ring }) {

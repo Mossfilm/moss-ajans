@@ -66,7 +66,8 @@ function Info({ firm }) {
     <>
       {firm.active === false && <div className="pill neutral" style={{ marginTop: 20 }}>Sayfa aktif değil</div>}
       {ig && ig.followers !== undefined && (
-        <a href="#/performans" className="card" style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, padding: 14, fontVariantNumeric: 'tabular-nums' }}>
+        <a href="#/performans" className="card" style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, padding: 16, minHeight: 112, alignContent: 'space-between', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}><Icon name="ig" size={16} />Instagram</span><span className="link">Performansı gör</span></span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">Takipçi</span><b style={{ fontSize: 18 }}>{ig.followers.toLocaleString('tr-TR')}</b></span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">30 gün</span><b style={{ fontSize: 18, color: d30 ? (d30.n >= 0 ? 'var(--moss)' : 'var(--alert-ink)') : 'var(--muted)' }}>{d30 ? (d30.n >= 0 ? '+' : '−') + Math.abs(d30.n).toLocaleString('tr-TR') : '—'}</b></span>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">Son izlenme</span><b style={{ fontSize: 18 }}>{ig.recent && ig.recent[0] && ig.recent[0].views != null ? ig.recent[0].views.toLocaleString('tr-TR') : '—'}</b></span>
@@ -86,7 +87,7 @@ function Info({ firm }) {
             return (
               <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}><span>{l}</span><b>{d}/{pk[k]}</b></div>
-                <div className="bar" style={{ height: 8 }} role="img" aria-label={l + ': ' + pk[k] + ' hedeften ' + d + ' tamamlandı'}><div style={{ width: Math.min(100, Math.round(d / pk[k] * 100)) + '%' }} /></div>
+                <div className="bar" style={{ background: 'var(--moss-soft)' }} role="img" aria-label={l + ': ' + pk[k] + ' hedeften ' + d + ' tamamlandı'}><div style={{ width: Math.min(100, Math.round(d / pk[k] * 100)) + '%' }} /></div>
               </div>
             );
           })}
@@ -201,15 +202,19 @@ export default function Firma({ id }) {
   return (
     <div className="screen">
       <button className="back" onClick={() => back('/firmalar')}><Icon name="left" size={20} />Firmalar</button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '8px 0 18px' }}>
-        <Logo firm={firm} size={72} radius={18} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <h1 className="h1" style={{ margin: 0, fontSize: 28, lineHeight: '32px' }}>{firm.name}</h1>
-          <span className="small">{firm.sector} · {upcoming.length} açık iş</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '10px 0 16px' }}>
+        <Logo firm={firm} size={80} radius={18} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 20, lineHeight: '26px', fontWeight: 700 }}>{firm.name}</h1>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span className="small" style={{ fontSize: 13 }}>{firm.sector} · {upcoming.length} açık iş</span>
+            {firm.active === false ? <span className="pill neutral">Pasif</span> : <span className="pill ok">Aktif</span>}
+          </span>
+          {firm.instagram && <a className="tiny" href={firm.instagram} target="_blank" rel="noreferrer" style={{ color: 'var(--moss)', fontWeight: 600 }}>{firm.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/[/?].*$/, '')}</a>}
         </div>
       </div>
-      <div className="seg" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-        {tabs.map(([k, l]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{l}</button>)}
+      <div className="tabs" role="tablist">
+        {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}
       </div>
 
       {tab === 'genel' && (

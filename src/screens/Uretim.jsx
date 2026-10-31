@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Fab, Logo, TypePill, Icon } from '../components/ui.jsx';
-import { STAGES, shortDate } from '../data.js';
+import { STAGES, shortDate, todayYmd, ymd, addDays } from '../data.js';
 import { useAsk } from '../components/Dialog.jsx';
 
 const HINTS = [
@@ -22,19 +22,20 @@ export default function Uretim() {
 
   return (
     <div className="screen">
-      <h1 className="h1" style={{ marginBottom: 6 }}>Üretim hattı</h1>
-      <p className="small" style={{ margin: '0 0 16px' }}>Her içerik fikirden yayına kadar bu aşamalardan geçer.</p>
+      <h1 className="h1" style={{ marginBottom: 4 }}>Üretim</h1>
+      <p className="small" style={{ margin: '0 0 16px', fontSize: 13 }}>Aktif {open.length} iş · Bu hafta {open.filter((t) => t.date >= todayYmd() && t.date <= ymd(addDays(new Date(), 6))).length} teslim</p>
 
       <div className="chips">
         {STAGES.map((s, i) => (
-          <button key={s.label} className="chip" aria-pressed={stage === i} onClick={() => setSt(i)}>
-            {s.label}<span className="count">{open.filter((t) => t.stage === i).length}</span>
+          <button key={s.label} className="chip stage" aria-pressed={stage === i} onClick={() => setSt(i)}>
+            {s.short}<span className="count">{open.filter((t) => t.stage === i).length}</span>
           </button>
         ))}
       </div>
-      <p className="small" style={{ margin: '14px 0 12px' }}>{HINTS[stage]}</p>
+      <div className="row-h2" style={{ marginTop: 20 }}><h2 className="h2">{STAGES[stage].label} · {items.length} iş</h2></div>
+      <p className="small" style={{ margin: '-4px 0 12px', fontSize: 13 }}>{HINTS[stage]}</p>
 
-      {items.length === 0 && <div className="card empty">Bu aşamada içerik yok.</div>}
+      {items.length === 0 && <div className="card empty"><span className="empty-ic"><Icon name="flow" size={28} /></span><b style={{ fontSize: 16, color: 'var(--ink)' }}>Bu aşamada içerik yok</b><span style={{ marginTop: 6 }}>İşler aşama ilerledikçe buraya düşer.</span></div>}
       <div className="stack">
         {items.map((t) => {
           const f = firms.find((x) => x.id === t.firmId);
@@ -42,7 +43,7 @@ export default function Uretim() {
             <div key={t.id} className="card" style={{ overflow: 'hidden' }}>
               <a href={'#/is/' + t.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 14px 10px' }}>
                 <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Logo firm={f} size={22} />{f ? f.name : ''}</span>
-                <span style={{ fontSize: 16, lineHeight: '21px', fontWeight: 600 }}>{t.title}</span>
+                <span style={{ fontSize: 15, lineHeight: '21px', fontWeight: 600 }}>{t.title}</span>
                 <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <TypePill type={t.type} />
                   {t.date && <span className="tiny">{shortDate(t.date)}{t.time ? ' ' + t.time : ''}</span>}

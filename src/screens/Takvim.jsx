@@ -31,21 +31,24 @@ export default function Takvim() {
 
   return (
     <div className="screen">
-      <h1 className="h1">Takvim</h1>
+      <div className="topbar" style={{ margin: '10px 0 16px' }}>
+        <h1 className="h1" style={{ margin: 0 }}>Takvim</h1>
+        <button className="btn sm" onClick={() => { const d = parseYmd(t0); setSel(t0); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); }}>Bugün</button>
+      </div>
 
       <div className="chips">
-        <button className="chip" aria-pressed={firm === 'all'} onClick={() => setFirm('all')}>Tümü</button>
+        <button className="chip" aria-pressed={firm === 'all'} onClick={() => setFirm('all')}>Tüm firmalar</button>
         {activeFirms.map((f) => (
-          <button key={f.id} className="chip" aria-pressed={firm === f.id} onClick={() => setFirm(f.id)} style={{ paddingLeft: 6 }}>
-            <Logo firm={f} size={26} radius={8} />{f.name}
+          <button key={f.id} className="chip" aria-pressed={firm === f.id} onClick={() => setFirm(f.id)} style={{ paddingLeft: 8 }}>
+            <Logo firm={f} size={20} radius={5} />{f.name}
           </button>
         ))}
       </div>
 
-      <div className="card" style={{ marginTop: 14, padding: '14px 12px 12px', borderRadius: 20 }}>
+      <div className="card" style={{ marginTop: 14, padding: '8px 12px 12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px 10px' }}>
           <button className="icon-btn" style={{ border: 0, background: 'var(--bg)', width: 40, height: 40 }} aria-label="Önceki ay" onClick={() => shift(-1)}><Icon name="left" size={18} /></button>
-          <span style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700 }}>{MONTHS[m]} {y}</span>
+          <span style={{ fontFamily: 'var(--display)', fontSize: 17, fontWeight: 700 }}>{MONTHS[m]} {y}</span>
           <button className="icon-btn" style={{ border: 0, background: 'var(--bg)', width: 40, height: 40 }} aria-label="Sonraki ay" onClick={() => shift(1)}><Icon name="right" size={18} /></button>
         </div>
         <div className="cal" aria-hidden="true">
@@ -69,7 +72,7 @@ export default function Takvim() {
           })}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '12px 4px 0', borderTop: '1px solid var(--line-2)', marginTop: 10 }}>
-          {[['Çekim', '#C46A1C'], ['Paylaşım', '#2F6DB0'], ['Kurgu / Tasarım', '#7D4A9C'], ['Toplantı', '#2F4A2C'], ['Rapor / Diğer', '#7C857E']].map(([l, c]) => (
+          {[['Çekim', TYPES.cekim.dot], ['Gönderi', TYPES.gonderi.dot], ['Reels', TYPES.reels.dot], ['Hikâye', TYPES.hikaye.dot], ['Kurgu', TYPES.kurgu.dot], ['Tasarım', TYPES.tasarim.dot], ['Toplantı', TYPES.toplanti.dot]].map(([l, c]) => (
             <span key={l} className="tiny" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--ink-2)' }}><span style={{ width: 8, height: 8, borderRadius: 4, background: c }} />{l}</span>
           ))}
           <span className="tiny" style={{ color: 'var(--ink-2)' }}><u>Altı çizili</u>: özel gün</span>
@@ -77,15 +80,19 @@ export default function Takvim() {
       </div>
 
       <div className="row-h2">
-        <h2 className="h2" style={{ fontSize: 16, color: 'var(--ink)' }}>{(sel === t0 ? 'Bugün · ' : '') + selDate.getDate() + ' ' + MONTHS[selDate.getMonth()] + ' ' + DAYS[selDate.getDay()]}</h2>
-        <span className="small">{dayTasks.length ? dayTasks.length + ' iş' : ''}</span>
+        <h2 className="h2">{(sel === t0 ? 'Bugün · ' : '') + selDate.getDate() + ' ' + MONTHS[selDate.getMonth()] + ' ' + DAYS[selDate.getDay()] + ' · ' + dayTasks.length + ' iş'}</h2>
+        <a className="icon-btn" style={{ width: 40, height: 40 }} href={'#/yeni?date=' + sel + (firm !== 'all' ? '&firma=' + firm : '')} aria-label="Bu güne iş ekle"><Icon name="plus" size={18} /></a>
       </div>
       {selSpecial.map((s) => <div key={s.name} className="pill ok" style={{ marginBottom: 10 }}>{s.name}{s.who ? ' · ' + s.who : ''}</div>)}
       <div className="stack">
         {dayTasks.map((t) => <TaskRow key={t.id} t={t} />)}
-        <a href={'#/yeni?date=' + sel + (firm !== 'all' ? '&firma=' + firm : '')} className="card" style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1.5px dashed var(--field)', fontWeight: 600, color: 'var(--moss)' }}>
-          <Icon name="plus" size={18} />Bu güne iş ekle
-        </a>
+        {dayTasks.length === 0 && (
+          <div className="card empty">
+            <span className="empty-ic"><Icon name="cal" size={28} /></span>
+            <b style={{ fontSize: 16, color: 'var(--ink)' }}>Bu tarihte planlanmış iş yok</b>
+            <a className="btn primary" style={{ marginTop: 20 }} href={'#/yeni?date=' + sel + (firm !== 'all' ? '&firma=' + firm : '')}><Icon name="plus" size={18} />İş ekle</a>
+          </div>
+        )}
       </div>
 
       <Fab to={'/yeni?date=' + sel} />

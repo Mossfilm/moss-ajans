@@ -75,19 +75,26 @@ export default function Performans() {
             <div className="card pad" style={{ marginTop: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Logo firm={firm} size={22} />@{d.username} · Takipçi</span>
-                  <span style={{ fontFamily: 'var(--display)', fontSize: 40, lineHeight: '44px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.followers)}</span>
+                  <span className="small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Logo firm={firm} size={22} />@{d.username}</span>
+                  <span className="tiny" style={{ marginTop: 6 }}>Toplam takipçi</span>
+                  <span style={{ fontFamily: 'var(--display)', fontSize: 36, lineHeight: '42px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.followers)}</span>
                 </div>
                 <div className="seg" style={{ gridTemplateColumns: '1fr 1fr', padding: 3 }}>
                   {[7, 30].map((r) => <button key={r} aria-pressed={range === r} onClick={() => setRange(r)} style={{ height: 34, fontSize: 12, padding: '0 10px', whiteSpace: 'nowrap' }}>{r} gün</button>)}
                 </div>
               </div>
               {delta && (
-                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 14, fontWeight: 600, color: delta.n >= 0 ? 'var(--moss)' : 'var(--alert-ink)' }}>
+                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 14, fontWeight: 600, color: delta.n > 0 ? '#276451' : delta.n < 0 ? 'var(--alert)' : 'var(--ink-2)' }}>
                   {delta.n >= 0 ? '▲ +' : '▼ −'}{fmt(Math.abs(delta.n))} · {shortDate(delta.since)}’den bu yana
                 </span>
               )}
               <div style={{ marginTop: 12 }}><Spark history={d.history} /></div>
+              {delta && (() => { const h = d.history; const end = h[h.length - 1].f; const start = end - delta.n; return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
+                  {[['Dönem başı', start], ['Dönem sonu', end], ['Net değişim', (delta.n > 0 ? '+' : delta.n < 0 ? '−' : '') + Math.abs(delta.n).toLocaleString('tr-TR')]].map(([l, v]) => (
+                    <div key={l} style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}><span className="tiny">{l}</span><b style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums' }}>{typeof v === 'number' ? fmt(v) : v}</b></div>
+                  ))}
+                </div>); })()}
               {d.error && <p className="err" style={{ marginTop: 8 }}>Son güncellemede sorun: {d.error}</p>}
             </div>
           )}

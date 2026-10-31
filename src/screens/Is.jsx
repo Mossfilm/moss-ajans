@@ -32,19 +32,18 @@ export default function Is({ id }) {
         <TypePill type={t.type} />
         {t.done && <span className="pill ok">Tamamlandı</span>}
       </div>
-      <h1 className="h1" style={{ fontSize: 30, lineHeight: '34px', margin: '12px 0 18px' }}>{t.title}</h1>
+      <h1 style={{ fontFamily: 'var(--display)', fontSize: 20, lineHeight: '27px', fontWeight: 700, margin: '12px 0 16px' }}>{t.title}</h1>
 
       <div className="card pad">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
           <span className="small" style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Aşama</span>
           <span className="small" style={{ fontWeight: 600, color: 'var(--moss)' }}>{stage + 1}/6 · {STAGES[stage].label}</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+        <div className="stepper">
           {STAGES.map((s, i) => (
-            <button key={s.label} onClick={() => setStage(t, i)} aria-label={s.label + (i === stage ? ' (şu anki aşama)' : '')}
-              style={{ height: 44, border: 0, background: 'transparent', padding: 0, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center' }}>
-              <span style={{ height: 6, borderRadius: 3, background: i < stage ? '#7C9A74' : i === stage ? 'var(--moss)' : 'var(--track)' }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: i === stage ? 'var(--ink)' : 'var(--muted)', textAlign: 'left' }}>{s.short}</span>
+            <button key={s.label} onClick={() => setStage(t, i)} aria-label={s.label + (i === stage ? ' (şu anki aşama)' : '')} className={i < stage ? 'past' : i === stage ? 'now' : ''}>
+              <span className="dot">{i < stage ? <Icon name="check" size={13} color="#fff" width={3} /> : i + 1}</span>
+              <span className="lbl">{s.short}</span>
             </button>
           ))}
         </div>

@@ -3,7 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { isConfigured } from './firebase.js';
 import { StoreProvider, useStore } from './store.jsx';
 import { DialogProvider } from './components/Dialog.jsx';
-import { useRoute } from './components/ui.jsx';
+import { useRoute, UndoToast } from './components/ui.jsx';
 import Login from './screens/Login.jsx';
 import Akis from './screens/Akis.jsx';
 import Takvim from './screens/Takvim.jsx';
@@ -96,6 +96,7 @@ export default function App() {
   return (
     <StoreProvider>
       <UpdateToast />
+      <UndoToast />
       <DialogProvider><div className="app"><Gate /></div></DialogProvider>
     </StoreProvider>
   );

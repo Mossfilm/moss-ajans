@@ -95,10 +95,10 @@ export default function Asistan() {
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: 'calc(14px + var(--safe-t)) 20px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" color="#fff" /></span>
+      <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: 'calc(12px + var(--safe-t)) 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span aria-hidden="true" style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--moss)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="sparkle" color="#fff" /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 22, fontWeight: 700 }}>Asistan</h1>
+          <h1 style={{ margin: 0, fontFamily: 'var(--display)', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>MOSS Asistan<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, color: 'var(--moss)' }}><span style={{ width: 6, height: 6, borderRadius: 3, background: busy ? 'var(--wait)' : '#3A8A71' }} />{busy ? 'Yazıyor' : 'Hazır'}</span></h1>
           <span className="tiny">{focusFirm ? 'Konu: ' + focusFirm.name + (focusItem ? ' · ' + focusItem.title : '') : 'Firmalar, takvim ve galeri hakkında sor ya da iste'}</span>
         </div>
         {msgs.length > 0 && <button className="link" onClick={() => { setMsgs([]); sessionStorage.removeItem(KEY); }}>Temizle</button>}
@@ -106,8 +106,17 @@ export default function Asistan() {
 
       <div style={{ flex: 1, padding: '16px 16px calc(220px + var(--safe-b))', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 560, width: '100%', margin: '0 auto' }}>
         {msgs.length === 0 && (
-          <div className="card pad" style={{ fontSize: 15, lineHeight: '22px' }}>
-            Merhaba! Benden şunları isteyebilirsin:
+          <div style={{ textAlign: 'center', padding: '20px 8px 4px' }}>
+            <span className="empty-ic" style={{ margin: '0 auto 14px' }}><Icon name="sparkle" size={28} /></span>
+            <div style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700 }}>Bugün ne üretelim?</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+              {[['Post hazırla', 'Post hazırla: '], ['Video senaryosu', 'Reels senaryosu yaz: '], ['İş oluştur', 'Takvime iş ekle: ']].map(([l, p]) => <button key={l} className="chip" onClick={() => { setDraft(p); setTimeout(() => { const el = document.getElementById('soru'); if (el) el.focus(); }, 0); }}>{l}</button>)}
+            </div>
+          </div>
+        )}
+        {msgs.length === 0 && (
+          <div className="card pad" style={{ fontSize: 14, lineHeight: '21px' }}>
+            Örnek istekler:
             <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
               <li>“10 Kasım için tüm firmalara post hazırla”</li>
               <li>“DSG Otomotiv için kış bakımı reels’i yap”</li>
@@ -118,10 +127,10 @@ export default function Asistan() {
           </div>
         )}
         {msgs.map((m, i) => m.role === 'user'
-          ? <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '82%', padding: '10px 14px', borderRadius: '18px 18px 4px 18px', background: 'var(--moss)', color: '#fff', fontSize: 15, lineHeight: '21px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+          ? <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '85%', padding: '12px 14px', borderRadius: '16px 16px 4px 16px', background: 'var(--moss)', color: '#fff', fontSize: 15, lineHeight: '21px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
           : (
-            <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '92%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div className="card" style={{ padding: '12px 14px', borderRadius: '4px 18px 18px 18px', fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+            <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '88%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="card" style={{ padding: '12px 14px', borderRadius: '4px 16px 16px 16px', fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>{m.text}</div>
               {(m.done || []).length > 0 && (
                 <div style={{ padding: '12px 14px', borderRadius: 16, background: 'var(--moss-soft)', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--moss)' }}>Uygulamada yaptıklarım</span>
@@ -152,15 +161,15 @@ export default function Asistan() {
         <div ref={endRef} />
       </div>
 
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + var(--safe-b))', zIndex: 15, background: 'var(--bg)', borderTop: '1px solid var(--line)', padding: '10px 0 12px' }}>
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(65px + var(--safe-b))', zIndex: 15, background: 'var(--bg)', borderTop: '1px solid var(--line)', padding: '10px 0 12px' }}>
         <div style={{ maxWidth: 560, margin: '0 auto' }}>
           <div className="chips" style={{ margin: 0, padding: '0 16px 8px' }}>
             {CHIPS.map((c) => <button key={c} className="chip" onClick={() => ask(focusFirm && c.includes('Ağustos') ? c : c)}>{c}</button>)}
           </div>
           <form onSubmit={(e) => { e.preventDefault(); ask(draft); }} style={{ display: 'flex', gap: 8, padding: '0 16px' }}>
             <label htmlFor="soru" className="sr">Asistana yaz</label>
-            <input id="soru" className="input" placeholder="Bir şey sor ya da iste…" value={draft} onChange={(e) => setDraft(e.target.value)} style={{ height: 52, borderRadius: 16 }} />
-            <button type="submit" aria-label="Gönder" disabled={busy || !draft.trim()} className="btn primary" style={{ width: 52, height: 52, padding: 0, borderRadius: 16, flexShrink: 0 }}><Icon name="up" color="#fff" /></button>
+            <input id="soru" className="input" placeholder="Bir şey sor ya da iste…" value={draft} onChange={(e) => setDraft(e.target.value)} style={{ height: 52, borderRadius: 12 }} />
+            <button type="submit" aria-label="Gönder" disabled={busy || !draft.trim()} className="btn primary" style={{ width: 52, height: 52, padding: 0, borderRadius: 12, flexShrink: 0 }}><Icon name="up" color="#fff" /></button>
           </form>
         </div>
       </div>

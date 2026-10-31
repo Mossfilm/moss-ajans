@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TYPES, shortDate } from '../data.js';
+import { TYPES, shortDate, todayYmd } from '../data.js';
 import { useStore } from '../store.jsx';
 
 // ---- Basit hash yönlendirme ----
@@ -80,9 +80,16 @@ export function TaskRow({ t, showDate = false }) {
   const { firms, users, toggleDone } = useStore();
   const firm = firms.find((f) => f.id === t.firmId);
   const who = assigneeLabel(t, users);
+  const late = !t.done && t.date && t.date < todayYmd();
+  const wait = !t.done && t.stage === 4;
+  const cls = 'task' + (t.done ? ' is-done' : late ? ' is-late' : wait ? ' is-wait' : '');
+  const onCheck = () => {
+    toggleDone(t);
+    if (!t.done) window.dispatchEvent(new CustomEvent('moss-undo', { detail: { ...t, done: true } }));
+  };
   return (
-    <div className="task">
-      <button className="check" onClick={() => toggleDone(t)} aria-label={t.done ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}>
+    <div className={cls}>
+      <button className="check" onClick={onCheck} aria-label={t.done ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle'}>
         <Check on={t.done} />
       </button>
       <a className="body" href={'#/is/' + t.id}>
@@ -94,11 +101,13 @@ export function TaskRow({ t, showDate = false }) {
           <div className={'title' + (t.done ? ' done' : '')}>{t.title}</div>
           <div className="tags">
             <TypePill type={t.type} />
+            {late && <span className="pill alert">Gecikti</span>}
+            {wait && <span className="pill wait">Onayda</span>}
             {who && <span className="tiny">{who}</span>}
             {t.commentCount > 0 && <span className="tiny" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="msg" size={14} />{t.commentCount}</span>}
           </div>
         </div>
-        <Icon name="right" size={18} color="#7C857E" />
+        <Icon name="right" size={18} color="var(--muted)" />
       </a>
     </div>
   );
@@ -167,4 +176,22 @@ export function Switch({ on, onToggle, label, hint }) {
 
 export function initials(name) {
   return (name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toLocaleUpperCase('tr');
+}
+
+export function UndoToast() {
+  const { toggleDone } = useStore();
+  const [t, setT] = useState(null);
+  useEffect(() => {
+    let timer;
+    const on = (e) => { setT(e.detail); clearTimeout(timer); timer = setTimeout(() => setT(null), 5000); };
+    window.addEventListener('moss-undo', on);
+    return () => { window.removeEventListener('moss-undo', on); clearTimeout(timer); };
+  }, []);
+  if (!t) return null;
+  return (
+    <div className="toast bottom" role="status">
+      <span style={{ flex: 1, minWidth: 0, fontSize: 14 }}><b style={{ fontWeight: 600 }}>Yapıldı:</b> <span style={{ opacity: 0.85 }}>{t.title}</span></span>
+      <button onClick={() => { toggleDone(t); setT(null); }}>Geri al</button>
+    </div>
+  );
 }

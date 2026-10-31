@@ -1,16 +1,16 @@
 // Sabit veriler: iş türleri, üretim aşamaları, ilk firmalar, özel günler, tarih yardımcıları.
 
 export const TYPES = {
-  cekim: { label: 'Çekim', bg: '#F6E3CF', fg: '#7A3E0C', dot: '#C46A1C' },
-  gonderi: { label: 'Gönderi', bg: '#DCE7F3', fg: '#1F4770', dot: '#2F6DB0' },
-  reels: { label: 'Reels', bg: '#DCE7F3', fg: '#1F4770', dot: '#2F6DB0' },
-  hikaye: { label: 'Hikâye', bg: '#DCE7F3', fg: '#1F4770', dot: '#2F6DB0' },
-  kurgu: { label: 'Kurgu', bg: '#ECE2F2', fg: '#5A2F73', dot: '#7D4A9C' },
-  tasarim: { label: 'Tasarım', bg: '#ECE2F2', fg: '#5A2F73', dot: '#7D4A9C' },
-  reklam: { label: 'Reklam', bg: '#F5DEDB', fg: '#8A2A1E', dot: '#B4471F' },
-  toplanti: { label: 'Toplantı', bg: '#E3EADB', fg: '#2F4A2C', dot: '#2F4A2C' },
-  rapor: { label: 'Rapor', bg: '#E6E4DB', fg: '#3A423C', dot: '#7C857E' },
-  diger: { label: 'Diğer', bg: '#E6E4DB', fg: '#3A423C', dot: '#7C857E' }
+  cekim: { label: 'Çekim', bg: '#E8E6F6', fg: '#51448F', dot: '#6E5FC0' },
+  gonderi: { label: 'Gönderi', bg: '#E5EFF8', fg: '#28577D', dot: '#3D7BB0' },
+  reels: { label: 'Reels', bg: '#F7E6EE', fg: '#8B325B', dot: '#B94C7E' },
+  hikaye: { label: 'Hikâye', bg: '#F8EBCF', fg: '#76531B', dot: '#B8862E' },
+  kurgu: { label: 'Kurgu', bg: '#E4ECF0', fg: '#345967', dot: '#4F8296' },
+  tasarim: { label: 'Tasarım', bg: '#EFE6F5', fg: '#714184', dot: '#9A5DB3' },
+  reklam: { label: 'Reklam', bg: '#F7E6DA', fg: '#85451E', dot: '#B9652F' },
+  toplanti: { label: 'Toplantı', bg: '#E2EFEA', fg: '#276451', dot: '#3A8A71' },
+  rapor: { label: 'Rapor', bg: '#E9EAE4', fg: '#4C5840', dot: '#76825F' },
+  diger: { label: 'Diğer', bg: '#ECECEB', fg: '#555A55', dot: '#858A85' }
 };
 export const TYPE_ORDER = ['cekim', 'gonderi', 'reels', 'hikaye', 'kurgu', 'tasarim', 'reklam', 'toplanti', 'rapor', 'diger'];
 
