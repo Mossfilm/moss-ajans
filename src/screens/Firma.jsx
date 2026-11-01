@@ -17,7 +17,7 @@ function Info({ firm }) {
   const save = async (e) => {
     e.preventDefault();
     await updateFirm(firm.id, {
-      name: f.name.trim(), sector: f.sector, instagram: (f.instagram || '').trim(), contact: f.contact || '', phone: f.phone || '',
+      name: f.name.trim(), sector: f.sector, instagram: (f.instagram || '').trim(), whatsappGroup: (f.whatsappGroup || '').trim(), contact: f.contact || '', phone: f.phone || '',
       approver: f.approver || '', notes: f.notes || '', active: f.active !== false,
       services: f.services.split(',').map((s) => s.trim()).filter(Boolean),
       package: Object.fromEntries(Object.entries(f.package).map(([k, v]) => [k, Number(v) || 0]))
@@ -38,6 +38,7 @@ function Info({ firm }) {
         <div className="field"><label className="label" htmlFor="s">Sektör</label><select id="s" className="select" value={f.sector} onChange={set('sector')}>{SECTORS.map((s) => <option key={s}>{s}</option>)}</select></div>
         <div className="card"><Switch on={f.active !== false} onToggle={() => setF({ ...f, active: f.active === false })} label="Sayfa aktif" hint="Kapalıysa takvim ve listelerde pasif görünür" /></div>
         <div className="field"><label className="label" htmlFor="ig">Instagram linki</label><input id="ig" className="input" value={f.instagram || ''} onChange={set('instagram')} placeholder="https://instagram.com/…" inputMode="url" /></div>
+        <div className="field"><label className="label" htmlFor="wg">WhatsApp grup adı</label><input id="wg" className="input" value={f.whatsappGroup || ''} onChange={set('whatsappGroup')} placeholder="Örn. Son Ders & Moss" /><span className="tiny">WhatsApp’tan gelen istekleri bu firmayla eşleştirmek için.</span></div>
         <div className="field"><label className="label" htmlFor="sv">Verdiğimiz hizmetler (virgülle)</label><input id="sv" className="input" value={f.services} onChange={set('services')} placeholder="Sosyal medya yönetimi, Video prodüksiyon" /></div>
         <div className="label">Aylık paket</div>
         <div className="grid2">
@@ -98,6 +99,7 @@ function Info({ firm }) {
       <h2 className="h2 hi"><span className="h-ic"><Icon name="user" size={14} /></span>Bilgiler</h2>
       <div className="card list">
         <Row icon="building" label="Sektör" value={firm.sector} />
+        <Row icon="msg" label="WhatsApp grubu" value={firm.whatsappGroup} />
         <Row icon="ig" label="Instagram" value={firm.instagram ? firm.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') : ''} href={firm.instagram} />
         <Row icon="user" label="Yetkili kişi" value={firm.contact} />
         <Row icon="phone" label="Telefon" value={firm.phone} href={firm.phone ? 'tel:' + firm.phone.replace(/\s/g, '') : ''} />

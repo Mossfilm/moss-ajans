@@ -18,6 +18,16 @@ import Asistan from './screens/Asistan.jsx';
 import CekimPlani from './screens/CekimPlani.jsx';
 import Performans from './screens/Performans.jsx';
 import Edit, { EditProje } from './screens/Edit.jsx';
+import Whatsapp from './screens/Whatsapp.jsx';
+
+// WhatsApp'tan 'Paylaş → Moss' ile gelen metni WhatsApp isteği ekranına yönlendir (PWA share_target)
+(() => {
+  const sp = new URLSearchParams(window.location.search);
+  const shared = [sp.get('title'), sp.get('text'), sp.get('url')].filter(Boolean).join('\n').trim();
+  if (shared) {
+    window.history.replaceState(null, '', window.location.pathname + '#/whatsapp?text=' + encodeURIComponent(shared));
+  }
+})();
 
 function UpdateToast() {
   const { needRefresh: [need], updateServiceWorker } = useRegisterSW({
@@ -74,6 +84,7 @@ function Router() {
   if (a === 'performans') return <Performans />;
   if (a === 'edit' && b) return <EditProje id={b} />;
   if (a === 'edit') return <Edit />;
+  if (a === 'whatsapp') return <Whatsapp q={r.q} />;
   return <Akis />;
 }
 

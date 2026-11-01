@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Hero, Clapper } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, back, go, useRoute } from '../components/ui.jsx';
-import { PostPreview, VideoPlayer, downloadPost, FORMATS, TEMPLATES } from '../components/Post.jsx';
+import { PostPreview, VideoPlayer, downloadPost, sharePost, FORMATS, TEMPLATES } from '../components/Post.jsx';
+import { WaGlyph } from './Whatsapp.jsx';
 import { shortDate } from '../data.js';
 import { useAsk } from '../components/Dialog.jsx';
 
@@ -142,6 +143,12 @@ export function GaleriItem({ id }) {
         <button className="btn primary" style={{ width: '100%', marginTop: 14 }} disabled={busy}
           onClick={async () => { setBusy(true); try { await downloadPost(spec, firm, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { setDlErr('İndirilemedi: ' + e.message); } setBusy(false); }}>
           {busy ? 'Hazırlanıyor…' : 'PNG olarak indir (' + (FORMATS[spec.format] || FORMATS.kare).w + '×' + (FORMATS[spec.format] || FORMATS.kare).h + ')'}
+        </button>
+      )}
+      {g.kind !== 'video' && (
+        <button className="btn primary" style={{ width: '100%', marginTop: 10, background: 'linear-gradient(180deg,#2BB75A,#1E9447)', borderColor: '#1E9447' }} disabled={busy}
+          onClick={async () => { setBusy(true); try { await sharePost(spec, firm, text, (firm ? firm.id : 'post') + '-' + (g.date || 'post')); } catch (e) { if (e && e.name !== 'AbortError') setDlErr('Gönderilemedi: ' + e.message); } setBusy(false); }}>
+          <WaGlyph width={20} height={20} />WhatsApp’ta gönder{firm && firm.whatsappGroup ? ' · ' + firm.whatsappGroup : ''}
         </button>
       )}
       {dlErr && <p className="err" role="alert" style={{ marginTop: 8 }}>{dlErr}</p>}

@@ -164,6 +164,30 @@ export function PostPreview({ spec, firm, width = 320, radius = 14 }) {
 
 // Tam çözünürlükte PNG indirme
 export async function downloadPost(spec, firm, fileName) {
+  const url = await renderPostPng(spec, firm);
+  const a = document.createElement('a');
+  a.href = url; a.download = (fileName || 'moss-post') + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// WhatsApp'a (ya da başka uygulamaya) görsel + metin olarak gönderir. Telefonda paylaşım menüsü açılır.
+export async function sharePost(spec, firm, caption, fileName) {
+  const url = await renderPostPng(spec, firm);
+  const blob = await (await fetch(url)).blob();
+  const file = new File([blob], (fileName || 'moss-post') + '.png', { type: 'image/png' });
+  try { if (caption && navigator.clipboard) await navigator.clipboard.writeText(caption); } catch (e) { /* izin yoksa geç */ }
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({ files: [file], text: caption || '' });
+    return 'shared';
+  }
+  const a = document.createElement('a');
+  a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  window.open('https://wa.me/?text=' + encodeURIComponent(caption || ''), '_blank');
+  return 'fallback';
+}
+
+export async function renderPostPng(spec, firm) {
   const { toPng } = await import('html-to-image');
   const { createRoot } = await import('react-dom/client');
   const f = FORMATS[spec.format] || FORMATS.kare;
@@ -175,10 +199,7 @@ export async function downloadPost(spec, firm, fileName) {
   await new Promise((r) => setTimeout(r, 400));
   await Promise.all(Array.from(host.querySelectorAll('img')).map((img) => (img.complete ? null : new Promise((r) => { img.onload = r; img.onerror = r; }))));
   try {
-    const url = await toPng(host.firstChild, { width: f.w, height: f.h, pixelRatio: 1, cacheBust: true });
-    const a = document.createElement('a');
-    a.href = url; a.download = (fileName || 'moss-post') + '.png';
-    document.body.appendChild(a); a.click(); a.remove();
+    return await toPng(host.firstChild, { width: f.w, height: f.h, pixelRatio: 1, cacheBust: true });
   } finally {
     root.unmount(); host.remove();
   }

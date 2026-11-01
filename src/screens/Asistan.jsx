@@ -5,6 +5,7 @@ import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
 import { PostPreview } from '../components/Post.jsx';
 import { todayYmd, ymd, addDays, upcomingSpecialDays, TYPES } from '../data.js';
 import { askGemini, QuotaError } from '../ai.js';
+import { WaGlyph } from './Whatsapp.jsx';
 
 const JOB_LABEL = { soru: 'Soru', post: 'Özel tasarım', video: 'Montaj', diger: 'İş' };
 const JOB_STATUS = { bekliyor: ['Sırada', 'pill wait'], isleniyor: ['Claude yapıyor', 'pill ok'], tamam: ['Bitti', 'pill ok'], hata: ['Yapılamadı', 'pill alert'] };
@@ -103,6 +104,7 @@ export default function Asistan() {
           {open.length > 0 && <button className="link" onClick={() => setShowJobs(!showJobs)} style={{ fontSize: 12, display: 'block', margin: '2px 0' }}>Claude sırasında {open.length} iş {showJobs ? '▴' : '▾'}</button>}
           <span className="tiny">{focusFirm ? 'Konu: ' + focusFirm.name + (focusItem ? ' · ' + focusItem.title : '') : 'Firmalar, takvim ve galeri hakkında sor ya da iste'}</span>
         </div>
+        <a href="#/whatsapp" className="icon-btn" aria-label="WhatsApp isteği" title="WhatsApp isteği" style={{ color: '#1E9447' }}><WaGlyph width={22} height={22} /></a>
         {msgs.length > 0 && <button className="link" onClick={() => clearChat()}>Temizle</button>}
       </div>
 
@@ -132,6 +134,7 @@ export default function Asistan() {
             <div style={{ fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700 }}>Bugün ne üretelim?</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 14 }}>
               {[['star', 'Post hazırla', 'Post hazırla: '], ['film', 'Video senaryosu', 'Reels senaryosu yaz: '], ['cal', 'İş oluştur', 'Takvime iş ekle: ']].map(([ic, l, p]) => <button key={l} className="chip sug" onClick={() => { setDraft(p); setTimeout(() => { const el = document.getElementById('soru'); if (el) el.focus(); }, 0); }}><Icon name={ic} size={15} />{l}</button>)}
+              <a href="#/whatsapp" className="chip sug" style={{ color: '#1E9447' }}><WaGlyph width={15} height={15} />WhatsApp isteği</a>
             </div>
           </div>
         )}
