@@ -3,7 +3,7 @@ import { useStore } from '../store.jsx';
 import { Nav, Fab, TaskRow, Logo, Icon, BellButton } from '../components/ui.jsx';
 import { PostPreview } from '../components/Post.jsx';
 import { Hero, Clapper, Reel, People } from '../components/Art.jsx';
-import { todayYmd, ymd, addDays, dayLabel, DAYS, MONTHS, upcomingSpecialDays, shortDate, parseYmd } from '../data.js';
+import { todayYmd, ymd, addDays, dayLabel, DAYS, MONTHS, upcomingSpecialDays, firmsFor, shortDate, parseYmd } from '../data.js';
 
 const byTime = (a, b) => ((a.date + (a.time || '99')) < (b.date + (b.time || '99')) ? -1 : 1);
 
@@ -18,7 +18,7 @@ export default function Akis() {
   const overdue = tasks.filter((t) => t.date && t.date < t0 && !t.done).sort(byTime);
   const week = tasks.filter((t) => t.date >= t0 && t.date <= end).sort(byTime);
   const waiting = tasks.filter((t) => t.stage === 4 && !t.done);
-  const special = upcomingSpecialDays(40);
+  const special = upcomingSpecialDays(40).filter((s) => firmsFor(s, firms).length > 0);
 
   const todayLeft = today.filter((t) => !t.done).length;
   const weekLeft = week.filter((t) => !t.done).length;
@@ -103,18 +103,19 @@ export default function Akis() {
 
           {special.length > 0 && (
             <>
-              <h2 className="h2">Yaklaşan özel günler</h2>
+              <div className="row-h2"><h2 className="h2">Yaklaşan özel günler</h2><a className="link" href="#/ozel-gunler">Tümü</a></div>
               <div className="card list">
                 {special.slice(0, 4).map((s) => {
                   const d = parseYmd(s.date);
                   const n = plannedFor(s.date);
                   const days = Math.round((d - parseYmd(t0)) / 86400000);
                   return (
-                    <a key={s.date + s.name} href={'#/takvim?date=' + s.date} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14 }}>
+                    <a key={s.date + s.name} href={'#/ozel-gunler?date=' + s.date} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: 14 }}>
                       <div style={{ width: 48, flexShrink: 0, textAlign: 'center' }}><div style={{ fontSize: 20, fontWeight: 700, lineHeight: '22px' }}>{d.getDate()}</div><div className="tiny">{shortDate(s.date).split(' ')[1]}</div></div>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <span style={{ fontSize: 15, fontWeight: 600 }}>{s.name}</span>
-                        <span className="tiny">{(s.who ? s.who + ' · ' : '') + (days === 0 ? 'bugün' : days + ' gün kaldı')}</span>
+                        <span style={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>{firmsFor(s, firms).slice(0, 6).map((f) => <Logo key={f.id} firm={f} size={18} radius={5} />)}<span className="tiny" style={{ marginLeft: 4 }}>{days === 0 ? 'bugün' : days + ' gün kaldı'}</span></span>
+                        {s.idea && <span className="tiny" style={{ lineHeight: '16px' }}>{s.idea}</span>}
                       </div>
                       {n > 0 ? <span className="pill ok">{n} iş planlı</span> : <span className="pill alert">Plan yok</span>}
                     </a>

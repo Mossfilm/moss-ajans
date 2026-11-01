@@ -3,7 +3,7 @@ import { Hero, Camera } from '../components/Art.jsx';
 import { brandOf } from '../components/Post.jsx';
 import { useStore } from '../store.jsx';
 import { Icon, Logo, back } from '../components/ui.jsx';
-import { todayYmd, ymd, addDays, parseYmd, DAYS, MONTHS, upcomingSpecialDays } from '../data.js';
+import { todayYmd, ymd, addDays, parseYmd, DAYS, MONTHS, upcomingSpecialDays, appliesTo } from '../data.js';
 
 // Hazır içerik stoğu: onaylanmış/yayına hazır ama henüz paylaşılmamış içerikler
 function stockOf(firm, tasks, gallery) {
@@ -41,8 +41,7 @@ export default function CekimPlani() {
     if (shootsSoon(r.firm.id).length > 0) return;
     const f = r.firm;
     const sp = specials.find((s) => {
-      const who = s.who || '';
-      const fits = who.includes('Tüm firmalar') || who.split(',').map((x) => x.trim()).includes(f.sector);
+      const fits = appliesTo(s, f) && s.kind !== 'okul' && s.kind !== 'sinav';
       const covered = tasks.some((t) => t.firmId === f.id && t.date && Math.abs(parseYmd(t.date) - parseYmd(s.date)) <= 3 * 86400000)
         || gallery.some((g) => g.firmId === f.id && g.date === s.date);
       return fits && !covered;

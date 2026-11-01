@@ -1,13 +1,34 @@
 import { useState } from 'react';
 import { useStore, useSub } from '../store.jsx';
 import { Nav, Logo, Icon, TaskRow, back, Switch, initials } from '../components/ui.jsx';
-import { SECTORS, todayYmd, timeAgo } from '../data.js';
+import { SECTORS, todayYmd, timeAgo, upcomingSpecialDays, appliesTo, parseYmd, MONTHS } from '../data.js';
 import { packageProgress } from './Firmalar.jsx';
 import { GalleryGrid } from './Galeri.jsx';
 import { useAsk } from '../components/Dialog.jsx';
 import { deltaOf } from './Performans.jsx';
 import { Hero, SECTOR_ART } from '../components/Art.jsx';
 import { brandOf } from '../components/Post.jsx';
+
+function FirmSpecial({ firm }) {
+  const list = upcomingSpecialDays(60).filter((s) => appliesTo(s, firm)).slice(0, 5);
+  if (!list.length) return null;
+  return (
+    <>
+      <div className="row-h2"><h2 className="h2 hi"><span className="h-ic"><Icon name="cal" size={14} /></span>Yaklaşan özel günler</h2><a className="link" href={'#/ozel-gunler?firma=' + firm.id}>Tümü</a></div>
+      <div className="card list">
+        {list.map((s) => {
+          const d = parseYmd(s.date);
+          return (
+            <a key={s.date + s.name} href={'#/ozel-gunler?firma=' + firm.id + '&date=' + s.date} style={{ display: 'flex', gap: 12, padding: 12, alignItems: 'flex-start' }}>
+              <span style={{ width: 40, flexShrink: 0, textAlign: 'center' }}><b style={{ fontSize: 18 }}>{d.getDate()}</b><br /><span className="tiny">{MONTHS[d.getMonth()].slice(0, 3)}</span></span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}><b style={{ fontSize: 14 }}>{s.name}</b>{s.idea && <span className="tiny" style={{ lineHeight: '16px' }}>{s.idea}</span>}</span>
+            </a>
+          );
+        })}
+      </div>
+    </>
+  );
+}
 
 function Info({ firm }) {
   const { updateFirm, tasks, insta } = useStore();
@@ -96,6 +117,7 @@ function Info({ firm }) {
           })}
         </div>
       )}
+      <FirmSpecial firm={firm} />
       <h2 className="h2 hi"><span className="h-ic"><Icon name="user" size={14} /></span>Bilgiler</h2>
       <div className="card list">
         <Row icon="building" label="Sektör" value={firm.sector} />

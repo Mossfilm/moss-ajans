@@ -3,7 +3,7 @@ import { Pen, Hero } from '../components/Art.jsx';
 import { useStore } from '../store.jsx';
 import { Nav, Icon, Logo, useRoute } from '../components/ui.jsx';
 import { PostPreview } from '../components/Post.jsx';
-import { todayYmd, ymd, addDays, upcomingSpecialDays, TYPES } from '../data.js';
+import { todayYmd, ymd, addDays, upcomingSpecialDays, firmsFor, TYPES } from '../data.js';
 import { askGemini, QuotaError } from '../ai.js';
 import { WaGlyph } from './Whatsapp.jsx';
 
@@ -16,7 +16,7 @@ const CHIPS = [
   'Ağustos Döner için kampanya postu yap'
 ];
 
-export default function Asistan() {
+export default function Asistan({ q }) {
   const { firms, tasks, gallery, addGallery, addTask, chat, jobs, addChat, addJob, clearChat, cancelJob, user, config } = useStore();
   const r = useRoute();
   const focusFirmId = r.q.get('firma');
@@ -26,7 +26,7 @@ export default function Asistan() {
   const msgs = chat;
   const [showJobs, setShowJobs] = useState(false);
   const open = jobs.filter((j) => j.status === 'bekliyor' || j.status === 'isleniyor');
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState((q && q.get('soru')) || '');
   const [busy, setBusy] = useState(false);
   const endRef = useRef(null);
 
@@ -40,7 +40,7 @@ export default function Asistan() {
       focusItem: focusItem ? { id: focusItem.id, firmId: focusItem.firmId, kind: focusItem.kind, title: focusItem.title, spec: focusItem.spec, caption: focusItem.caption } : null,
       firms: firms.map((f) => ({ id: f.id, name: f.name, sector: f.sector, active: f.active !== false, package: f.package || {}, notes: (f.notes || '').slice(0, 200) })),
       tasks: tasks.filter((t) => !t.done && t.date >= t0 && t.date <= end).slice(0, 60).map((t) => ({ firmId: t.firmId, title: t.title, type: t.type, date: t.date, stage: t.stage })),
-      special: upcomingSpecialDays(45)
+      special: upcomingSpecialDays(45).map((s) => ({ date: s.date, name: s.name, idea: s.idea, firms: firmsFor(s, firms).map((f) => f.name) })).filter((s) => s.firms.length)
     };
   };
 

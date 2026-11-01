@@ -4,7 +4,7 @@ import { Icon, Logo, back, go } from '../components/ui.jsx';
 import { PostPreview, sharePost, FORMATS } from '../components/Post.jsx';
 import { Hero } from '../components/Art.jsx';
 import { askGemini, QuotaError } from '../ai.js';
-import { todayYmd, upcomingSpecialDays } from '../data.js';
+import { todayYmd, upcomingSpecialDays, appliesTo } from '../data.js';
 
 // WhatsApp grubundan gelen isteği posta çevirir: Paylaş → Moss (ya da yapıştır) → post hazırla → WhatsApp'ta gönder.
 // Ücretsizdir; WhatsApp'a otomatik bağlanmaz (numara güvenliği için gönderimi ekip yapar).
@@ -70,7 +70,7 @@ export default function Whatsapp({ q }) {
           today: t0, focusFirm: firm.name + ' (' + firm.id + ')',
           firms: [{ id: firm.id, name: firm.name, sector: firm.sector, active: true, notes: (firm.notes || '').slice(0, 300) }],
           tasks: tasks.filter((t) => t.firmId === firm.id && !t.done && t.date >= t0).slice(0, 10).map((t) => ({ title: t.title, type: t.type, date: t.date })),
-          special: upcomingSpecialDays(30)
+          special: upcomingSpecialDays(30).filter((s) => appliesTo(s, firm)).map((s) => ({ date: s.date, name: s.name, idea: s.idea }))
         }
       });
       const a = (r.actions || []).find((x) => x.action === 'create_post');

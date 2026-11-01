@@ -8,7 +8,7 @@
 //   22:00–08:00 arası bildirim gönderilmez
 import webpush from 'web-push';
 import { adminReady, list, get, set, remove, istanbulNow } from './lib/admin.mjs';
-import { specialDays } from '../src/data.js';
+import { specialDays, firmsFor } from '../src/data.js';
 
 const TYPE = { cekim: 'Çekim', gonderi: 'Gönderi', reels: 'Reels', hikaye: 'Hikâye', kurgu: 'Kurgu', tasarim: 'Tasarım', reklam: 'Reklam', toplanti: 'Toplantı', rapor: 'Rapor', diger: 'İş' };
 const addDays = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
@@ -41,8 +41,10 @@ export function plan({ now, subs, tasks, firms, sent }) {
     if (now.hour === 9 && p.special) {
       const year = Number(now.ymd.slice(0, 4));
       specialDays(year).concat(specialDays(year + 1)).forEach((d) => {
-        [21, 7].forEach((n) => {
-          if (d.date === addDays(now.ymd, n)) push(s, 'ozel-' + d.date + '-' + n, d.name + '’ne ' + n + ' gün var', (d.who ? d.who + ' için ' : '') + 'tasarım ve video hazırlığına başlama zamanı.', '/takvim?date=' + d.date);
+        const fs = firmsFor(d, firms);
+        if (!fs.length) return;
+        (d.major ? [21, 7] : [7]).forEach((n) => {
+          if (d.date === addDays(now.ymd, n)) push(s, 'ozel-' + d.date + '-' + d.name.slice(0, 20) + '-' + n, d.name + ': ' + n + ' gün var', (fs.length > 3 ? fs.length + ' firma' : fs.map((f) => f.name).join(', ')) + ' için içerik zamanı. ' + (d.idea || ''), '/ozel-gunler?date=' + d.date);
         });
       });
     }

@@ -18,6 +18,7 @@ import Asistan from './screens/Asistan.jsx';
 import CekimPlani from './screens/CekimPlani.jsx';
 import Performans from './screens/Performans.jsx';
 import Edit, { EditProje } from './screens/Edit.jsx';
+import OzelGunler from './screens/OzelGunler.jsx';
 import Whatsapp from './screens/Whatsapp.jsx';
 
 // WhatsApp'tan 'Paylaş → Moss' ile gelen metni WhatsApp isteği ekranına yönlendir (PWA share_target)
@@ -79,7 +80,8 @@ function Router() {
   if (a === 'bildirimler') return <Bildirimler />;
   if (a === 'galeri' && b) return <GaleriItem id={b} />;
   if (a === 'galeri') return <Galeri />;
-  if (a === 'asistan') return <Asistan />;
+  if (a === 'asistan') return <Asistan q={r.q} />;
+  if (a === 'ozel-gunler') return <OzelGunler key={r.q.get('firma') || ''} q={r.q} />;
   if (a === 'cekim-plani') return <CekimPlani />;
   if (a === 'performans') return <Performans />;
   if (a === 'edit' && b) return <EditProje id={b} />;

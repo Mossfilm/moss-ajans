@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store.jsx';
 import { Nav, Fab, TaskRow, Icon, Logo, useRoute } from '../components/ui.jsx';
 import { Hero } from '../components/Art.jsx';
-import { TYPES, MONTHS, DAYS, ymd, todayYmd, parseYmd, specialDays } from '../data.js';
+import { TYPES, MONTHS, DAYS, ymd, todayYmd, parseYmd, specialDays, firmsFor } from '../data.js';
 
 export default function Takvim() {
   const { tasks, firms } = useStore();
@@ -85,7 +85,13 @@ export default function Takvim() {
         <h2 className="h2">{(sel === t0 ? 'Bugün · ' : '') + selDate.getDate() + ' ' + MONTHS[selDate.getMonth()] + ' ' + DAYS[selDate.getDay()] + ' · ' + dayTasks.length + ' iş'}</h2>
         <a className="icon-btn" style={{ width: 40, height: 40 }} href={'#/yeni?date=' + sel + (firm !== 'all' ? '&firma=' + firm : '')} aria-label="Bu güne iş ekle"><Icon name="plus" size={18} /></a>
       </div>
-      {selSpecial.map((s) => <div key={s.name} className="pill ok" style={{ marginBottom: 10 }}>{s.name}{s.who ? ' · ' + s.who : ''}</div>)}
+      {selSpecial.filter((s) => firmsFor(s, firms).length).map((s) => (
+        <a key={s.name} href={'#/ozel-gunler?date=' + s.date} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: 12, marginBottom: 10, borderLeft: '3px solid var(--moss)' }}>
+          <b style={{ fontSize: 14 }}>{s.name}</b>
+          {s.idea && <span className="small" style={{ fontSize: 13 }}>{s.idea}</span>}
+          <span className="tiny">{firmsFor(s, firms).map((f) => f.name).join(', ')}</span>
+        </a>
+      ))}
       <div className="stack">
         {dayTasks.map((t) => <TaskRow key={t.id} t={t} />)}
         {dayTasks.length === 0 && (
